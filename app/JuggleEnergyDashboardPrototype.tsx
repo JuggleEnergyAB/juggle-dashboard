@@ -8,6 +8,22 @@ export default function JuggleEnergyDashboardPrototype() {
     { name: "Battery PCS", type: "Battery", status: "Online", read: "18.3 kW" },
   ];
 
+  const navItems = [
+    "Dashboard",
+    "Energy & CO₂",
+    "Carbon",
+    "Plot & Report",
+    "Daily Energy",
+    "Monthly Energy",
+    "Yearly Comparison",
+    "Alarms",
+    "Meters",
+    "Inverters",
+    "Signals",
+    "Staff",
+    "Billing",
+  ];
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -47,32 +63,30 @@ export default function JuggleEnergyDashboardPrototype() {
         </div>
 
         <nav className="mx-auto flex max-w-7xl flex-wrap gap-2 px-6 pb-4 text-sm text-slate-500">
-          {[
-            "Dashboard",
-            "Energy & CO₂",
-            "Carbon",
-            "Plot & Report",
-            "Daily Energy",
-            "Monthly Energy",
-            "Yearly Comparison",
-            "Alarms",
-            "Meters",
-            "Inverters",
-            "Signals",
-            "Staff",
-            "Billing",
-          ].map((item, index) => (
-            <button
-              key={item}
-              className={`rounded-xl px-3 py-2 transition ${
-                index === 0
-                  ? "border border-slate-300 bg-white text-slate-900 shadow-sm"
-                  : "hover:bg-slate-100"
-              }`}
-            >
-              {item}
-            </button>
-          ))}
+          {navItems.map((item, index) => {
+            const isActive = index === 0;
+            const isAlarmTab = item === "Alarms";
+
+            return (
+              <button
+                key={item}
+                className={`relative rounded-xl px-3 py-2 transition ${
+                  isActive
+                    ? "border border-slate-300 bg-white text-slate-900 shadow-sm"
+                    : "hover:bg-slate-100"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  {item}
+                  {isAlarmTab && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-100 px-1.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-200">
+                      3
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </nav>
       </header>
 
@@ -85,23 +99,26 @@ export default function JuggleEnergyDashboardPrototype() {
               className="h-full w-full object-cover"
             />
 
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/15 via-transparent to-transparent pointer-events-none" />
 
             <div className="absolute left-6 top-6 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
               <span className="font-semibold text-slate-800">☀ Irradiance 722 W/m²</span>
             </div>
 
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
-              <span className="font-semibold text-slate-800">104.2 kW</span>
+            <div className="absolute left-[140px] top-[78px] rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
+              <div className="font-semibold text-slate-900">104.2 kW</div>
             </div>
 
-            <div className="absolute top-12 right-24 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
-              <span className="font-semibold text-slate-800">92.0 kW</span>
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
+              <div className="font-semibold text-slate-900">156 kW</div>
             </div>
 
-            <div className="absolute bottom-6 right-6 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200 flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-semibold text-emerald-700">Battery 94%</span>
+            <div className="absolute top-16 right-24 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
+              <div className="font-semibold text-slate-900">92.0 kW</div>
+            </div>
+
+            <div className="absolute bottom-6 right-10 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
+              <div className="font-semibold text-emerald-700">94%</div>
             </div>
           </div>
         </section>
