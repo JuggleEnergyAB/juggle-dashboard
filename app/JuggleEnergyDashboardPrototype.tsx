@@ -78,25 +78,30 @@ export default function JuggleEnergyDashboardPrototype() {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="relative">
+          <div className="relative h-[320px] overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100">
             <img
               src="/solar-dashboard.png"
               alt="Solar dashboard hero"
-              className="h-[360px] w-full object-cover"
+              className="h-full w-full object-cover"
             />
 
-            <div className="absolute inset-0 bg-gradient-to-r from-white/35 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-transparent pointer-events-none" />
 
-            <div className="absolute left-6 top-6">
-              <div className="rounded-2xl bg-white/90 px-4 py-2 shadow ring-1 ring-slate-200">
-                <span className="font-semibold text-slate-800">☀ Irradiance 722 W/m²</span>
-              </div>
+            <div className="absolute left-6 top-6 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
+              <span className="font-semibold text-slate-800">☀ Irradiance 722 W/m²</span>
             </div>
 
-            <div className="absolute right-6 bottom-6">
-              <div className="rounded-2xl bg-white/90 px-4 py-2 shadow ring-1 ring-slate-200">
-                <span className="font-semibold text-emerald-700">🔋 Battery Storage 94%</span>
-              </div>
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
+              <span className="font-semibold text-slate-800">104.2 kW</span>
+            </div>
+
+            <div className="absolute top-12 right-24 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
+              <span className="font-semibold text-slate-800">92.0 kW</span>
+            </div>
+
+            <div className="absolute bottom-6 right-6 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200 flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-semibold text-emerald-700">Battery 94%</span>
             </div>
           </div>
         </section>
