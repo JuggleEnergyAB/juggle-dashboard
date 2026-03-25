@@ -34,8 +34,12 @@ export default function JuggleEnergyDashboardPrototype() {
 
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 pb-4">
           <div>
-            <div className="text-3xl font-semibold tracking-tight">Smithy&apos;s Mushrooms PH1</div>
-            <div className="text-lg font-medium text-slate-700">Solar PV Installation AMP:00028</div>
+            <div className="text-3xl font-semibold tracking-tight">
+              Smithy&apos;s Mushrooms PH1
+            </div>
+            <div className="text-lg font-medium text-slate-700">
+              Solar PV Installation AMP:00028
+            </div>
           </div>
           <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
             Live mock view
@@ -74,67 +78,25 @@ export default function JuggleEnergyDashboardPrototype() {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="relative h-[360px] overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,219,120,0.22),transparent_25%),radial-gradient(circle_at_70%_10%,rgba(255,255,255,0.95),transparent_28%)]" />
-            <div className="absolute inset-x-0 top-8 mx-auto h-52 max-w-5xl rounded-[120px] bg-[radial-gradient(ellipse_at_center,rgba(191,219,254,0.8),rgba(255,255,255,0)_70%)]" />
+          <div className="relative">
+            <img
+              src="/solar-dashboard.png"
+              alt="Solar dashboard hero"
+              className="h-[360px] w-full object-cover"
+            />
 
-            <div className="absolute left-0 right-0 top-16 flex justify-center">
-              <div className="h-12 w-36 rounded-full border border-slate-200 bg-white/90 shadow-sm" />
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-white/35 via-transparent to-transparent" />
 
-            <div className="absolute left-8 top-32 flex items-end gap-10">
-              <div className="flex flex-col items-center gap-2">
-                <div className="h-16 w-1.5 rounded-full bg-slate-300" />
-                <div className="h-14 w-28 -skew-x-12 rounded-xl border border-sky-900/25 bg-[linear-gradient(135deg,#2455a7,#63a5f3)] shadow-lg" />
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="h-24 w-2 rounded-full bg-slate-300" />
-                <div className="h-16 w-40 -skew-x-12 rounded-xl border border-sky-900/25 bg-[linear-gradient(135deg,#20468f,#5ea1f2)] shadow-xl" />
+            <div className="absolute left-6 top-6">
+              <div className="rounded-2xl bg-white/90 px-4 py-2 shadow ring-1 ring-slate-200">
+                <span className="font-semibold text-slate-800">☀ Irradiance 722 W/m²</span>
               </div>
             </div>
 
-            <div className="absolute left-8 top-24 rounded-2xl bg-white/95 px-4 py-2 shadow-sm ring-1 ring-slate-200">
-              <span className="font-semibold text-slate-800">☀ Irradiance 722 W/m²</span>
-            </div>
-
-            <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between px-6 pb-0">
-              <div className="h-20 w-64 rounded-t-[5rem] bg-lime-600/85" />
-              <div className="h-14 w-72 rounded-t-[4rem] bg-lime-700/80" />
-              <div className="h-20 w-72 rounded-t-[5rem] bg-lime-600/85" />
-            </div>
-
-            <div className="absolute bottom-10 left-1/2 h-40 w-[420px] -translate-x-1/2 rounded-t-2xl rounded-b-md bg-slate-200 shadow-xl ring-1 ring-slate-300">
-              <div className="absolute inset-x-6 top-5 h-11 rounded-lg bg-slate-300" />
-              <div className="absolute inset-x-10 top-20 h-16 rounded-lg bg-slate-900/10" />
-              <div className="absolute bottom-0 left-0 right-0 h-10 rounded-b-md bg-slate-300" />
-            </div>
-
-            <div className="absolute bottom-10 right-10 flex items-end gap-5">
-              <div className="grid h-28 w-44 grid-cols-3 gap-2 rounded-2xl border border-slate-300 bg-white/90 p-3 shadow-lg">
-                <div className="rounded bg-emerald-100" />
-                <div className="rounded bg-emerald-200" />
-                <div className="rounded bg-emerald-300" />
-                <div className="rounded bg-emerald-200" />
-                <div className="rounded bg-emerald-300" />
-                <div className="rounded bg-emerald-500" />
+            <div className="absolute right-6 bottom-6">
+              <div className="rounded-2xl bg-white/90 px-4 py-2 shadow ring-1 ring-slate-200">
+                <span className="font-semibold text-emerald-700">🔋 Battery Storage 94%</span>
               </div>
-              <div className="flex h-28 items-center">
-                <div className="h-2 w-16 rounded-full bg-lime-400 shadow-[0_0_16px_rgba(163,230,53,0.7)]" />
-              </div>
-              <div className="grid h-28 w-28 grid-cols-1 gap-2 rounded-2xl border border-slate-300 bg-white/90 p-3 shadow-lg">
-                <div className="rounded bg-slate-200" />
-                <div className="rounded bg-slate-300" />
-                <div className="rounded bg-slate-400" />
-              </div>
-            </div>
-
-            <div className="absolute right-20 top-24 rounded-2xl bg-white/95 px-4 py-2 shadow-sm ring-1 ring-slate-200">
-              <span className="font-semibold text-emerald-700">Battery charging 18.3 kW</span>
-            </div>
-
-            <div className="absolute right-28 top-20 flex items-end gap-8 opacity-70">
-              <div className="h-32 w-px bg-sky-800" />
-              <div className="h-44 w-px bg-sky-900" />
             </div>
           </div>
         </section>
@@ -145,7 +107,10 @@ export default function JuggleEnergyDashboardPrototype() {
             { title: "Building Consumption", now: "156 kW", today: "860 kWh today" },
             { title: "Battery Storage", now: "94%", today: "18.3 kW charging" },
           ].map((card) => (
-            <div key={card.title} className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div
+              key={card.title}
+              className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+            >
               <div className="text-sm font-medium text-slate-500">{card.title}</div>
               <div className="mt-3 text-4xl font-semibold tracking-tight">{card.now}</div>
               <div className="mt-1 text-sm text-slate-500">{card.today}</div>
@@ -205,7 +170,11 @@ export default function JuggleEnergyDashboardPrototype() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                        {device.type === "Meter" ? "M" : device.type === "Battery" ? "B" : "INV"}
+                        {device.type === "Meter"
+                          ? "M"
+                          : device.type === "Battery"
+                          ? "B"
+                          : "INV"}
                       </div>
                       <div>
                         <div className="font-medium">{device.name}</div>
