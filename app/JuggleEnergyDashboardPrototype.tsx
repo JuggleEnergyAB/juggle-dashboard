@@ -8,12 +8,13 @@ export default function JuggleEnergyDashboardPrototype() {
   const pathname = usePathname();
   const [heroCollapsed, setHeroCollapsed] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
+  const [dateFrom, setDateFrom] = useState("2026-03-18");
+  const [dateTo, setDateTo] = useState("2026-03-24");
+  const [rangeLabel, setRangeLabel] = useState("7D");
 
   useEffect(() => {
     const saved = window.localStorage.getItem("dashboard-hero-collapsed");
-    if (saved === "true") {
-      setHeroCollapsed(true);
-    }
+    if (saved === "true") setHeroCollapsed(true);
     setHeroReady(true);
   }, []);
 
@@ -21,6 +22,23 @@ export default function JuggleEnergyDashboardPrototype() {
     const next = !heroCollapsed;
     setHeroCollapsed(next);
     window.localStorage.setItem("dashboard-hero-collapsed", String(next));
+  };
+
+  const setPresetRange = (preset: "7D" | "30D" | "MTD" | "YTD") => {
+    setRangeLabel(preset);
+    if (preset === "7D") {
+      setDateFrom("2026-03-18");
+      setDateTo("2026-03-24");
+    } else if (preset === "30D") {
+      setDateFrom("2026-02-24");
+      setDateTo("2026-03-24");
+    } else if (preset === "MTD") {
+      setDateFrom("2026-03-01");
+      setDateTo("2026-03-24");
+    } else if (preset === "YTD") {
+      setDateFrom("2026-01-01");
+      setDateTo("2026-03-24");
+    }
   };
 
   const devices = [
@@ -206,117 +224,164 @@ export default function JuggleEnergyDashboardPrototype() {
           ))}
         </section>
 
-        <section className="mt-6 grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
-          <div className="space-y-6">
-            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-              <div className="mb-4 flex items-center justify-between">
+        <section className="mt-6 grid gap-6 lg:grid-cols-[1.05fr,0.95fr]">
+          <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+              <div>
                 <h2 className="text-2xl font-semibold">Weekly Energy</h2>
-                <div className="text-sm text-slate-500">24/03/2026</div>
+                <div className="mt-1 text-sm text-slate-500">
+                  Select a custom reporting period
+                </div>
               </div>
 
-              <div className="relative h-72 overflow-hidden rounded-2xl bg-slate-50">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.15)_1px,transparent_1px),linear-gradient(to_top,rgba(148,163,184,0.15)_1px,transparent_1px)] bg-[size:56px_56px]" />
-                <svg viewBox="0 0 700 280" className="absolute inset-0 h-full w-full">
-                  <path
-                    d="M0 250 C 120 250, 160 240, 220 180 S 330 50, 420 80 S 520 250, 560 250 S 590 120, 610 145 S 640 250, 665 250 S 680 120, 700 150"
-                    fill="rgba(163,191,89,0.18)"
-                    stroke="rgba(132,153,52,0.95)"
-                    strokeWidth="4"
-                  />
-                </svg>
-              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-2">
+                  {["7D", "30D", "MTD", "YTD"].map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => setPresetRange(preset as "7D" | "30D" | "MTD" | "YTD")}
+                      className={`rounded-xl px-3 py-2 text-sm font-medium ring-1 transition ${
+                        rangeLabel === preset
+                          ? "bg-slate-900 text-white ring-slate-900"
+                          : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <div className="text-sm text-slate-500">Week</div>
-                  <div className="text-xl font-semibold">4.3 MWh</div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+                    <label className="block text-xs text-slate-500">From</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => {
+                        setDateFrom(e.target.value);
+                        setRangeLabel("Custom");
+                      }}
+                      className="mt-1 bg-transparent text-sm font-medium outline-none"
+                    />
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+                    <label className="block text-xs text-slate-500">To</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => {
+                        setDateTo(e.target.value);
+                        setRangeLabel("Custom");
+                      }}
+                      className="mt-1 bg-transparent text-sm font-medium outline-none"
+                    />
+                  </div>
                 </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <div className="text-sm text-slate-500">Month</div>
-                  <div className="text-xl font-semibold">18.2 MWh</div>
-                </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <div className="text-sm text-slate-500">This year</div>
-                  <div className="text-xl font-semibold">32.9 MWh</div>
-                </div>
+              </div>
+            </div>
+
+            <div className="relative h-52 overflow-hidden rounded-2xl bg-slate-50">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.15)_1px,transparent_1px),linear-gradient(to_top,rgba(148,163,184,0.15)_1px,transparent_1px)] bg-[size:48px_48px]" />
+              <svg viewBox="0 0 700 220" className="absolute inset-0 h-full w-full">
+                <path
+                  d="M0 195 C 90 195, 130 182, 190 140 S 300 40, 390 62 S 500 190, 560 182 S 610 96, 700 118"
+                  fill="rgba(163,191,89,0.18)"
+                  stroke="rgba(132,153,52,0.95)"
+                  strokeWidth="4"
+                />
+              </svg>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <div className="text-sm text-slate-500">Range Energy</div>
+                <div className="text-xl font-semibold">4.3 MWh</div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <div className="text-sm text-slate-500">Average / day</div>
+                <div className="text-xl font-semibold">614 kWh</div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <div className="text-sm text-slate-500">Selected Period</div>
+                <div className="text-xl font-semibold">{rangeLabel === "Custom" ? "Custom" : rangeLabel}</div>
               </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-2xl font-semibold">Device Overview</h2>
-                <div className="text-sm text-slate-500">6 devices</div>
-              </div>
-
-              <div className="space-y-3">
-                {devices.map((device) => (
-                  <div
-                    key={device.name}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                        {device.type === "Meter"
-                          ? "M"
-                          : device.type === "Battery"
-                          ? "B"
-                          : "INV"}
-                      </div>
-                      <div>
-                        <div className="font-medium">{device.name}</div>
-                        <div
-                          className={`text-sm ${
-                            device.status === "Online" ? "text-emerald-600" : "text-red-500"
-                          }`}
-                        >
-                          {device.status}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold">{device.read}</div>
-                      <div className="text-sm text-slate-500">Instant read</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">Device Overview</h2>
+              <div className="text-sm text-slate-500">6 devices</div>
             </div>
 
-            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-2xl font-semibold">Critical Alarms</h2>
-              <div className="mt-4 space-y-3">
-                {[
-                  "Inverter 3 offline",
-                  "Grid import high",
-                  "Weather station stale data",
-                ].map((alarm) => (
-                  <div key={alarm} className="rounded-2xl bg-red-50 px-4 py-3 text-red-700">
-                    {alarm}
+            <div className="space-y-2">
+              {devices.map((device) => (
+                <div
+                  key={device.name}
+                  className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                      {device.type === "Meter"
+                        ? "M"
+                        : device.type === "Battery"
+                        ? "B"
+                        : "INV"}
+                    </div>
+                    <div>
+                      <div className="font-medium">{device.name}</div>
+                      <div
+                        className={`text-sm ${
+                          device.status === "Online" ? "text-emerald-600" : "text-red-500"
+                        }`}
+                      >
+                        {device.status}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div className="text-right">
+                    <div className="font-semibold">{device.read}</div>
+                    <div className="text-sm text-slate-500">Instant read</div>
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
+        </section>
 
-            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-              <h2 className="text-2xl font-semibold">System Status</h2>
-              <div className="mt-4 grid gap-3">
-                {[
-                  ["G100 export limit", "OK"],
-                  ["Switchgear", "OK"],
-                  ["Weather station", "Online"],
-                  ["JBox signal", "Fair"],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
-                  >
-                    <span className="text-slate-600">{label}</span>
-                    <span className="font-semibold">{value}</span>
-                  </div>
-                ))}
-              </div>
+        <section className="mt-6 grid gap-6 xl:grid-cols-[1fr,1fr]">
+          <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-2xl font-semibold">Critical Alarms</h2>
+            <div className="mt-4 space-y-3">
+              {[
+                "Inverter 3 offline",
+                "Grid import high",
+                "Weather station stale data",
+              ].map((alarm) => (
+                <div key={alarm} className="rounded-2xl bg-red-50 px-4 py-3 text-red-700">
+                  {alarm}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-2xl font-semibold">System Status</h2>
+            <div className="mt-4 grid gap-3">
+              {[
+                ["G100 export limit", "OK"],
+                ["Switchgear", "OK"],
+                ["Weather station", "Online"],
+                ["JBox signal", "Fair"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
+                >
+                  <span className="text-slate-600">{label}</span>
+                  <span className="font-semibold">{value}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
