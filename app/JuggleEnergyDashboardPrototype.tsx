@@ -2,20 +2,220 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type Device = {
+  name: string;
+  type: "Inverter" | "Meter" | "Battery";
+  status: "Online" | "Offline";
+  read: string;
+};
+
+type CsvRow = {
+  timestamp: string;
+  day: string;
+  importKwhRel: number;
+  importKw: number;
+  exportKwhRel: number;
+  generationKwhRel: number;
+  generationKw: number;
+};
+
+type HoverPoint = {
+  index: number;
+  x: number;
+  yGeneration: number;
+  yImport: number;
+  row: CsvRow;
+};
+
+function parseNum(value: string | undefined): number {
+  if (!value || value.trim() === "") return 0;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function shiftDate(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function clampDate(dateStr: string, minDate: string, maxDate: string): string {
+  if (dateStr < minDate) return minDate;
+  if (dateStr > maxDate) return maxDate;
+  return dateStr;
+}
+
+function daysBetweenInclusive(from: string, to: string): number {
+  const start = new Date(`${from}T00:00:00Z`).getTime();
+  const end = new Date(`${to}T00:00:00Z`).getTime();
+  const diff = Math.max(0, end - start);
+  return Math.floor(diff / 86400000) + 1;
+}
+
+function formatNumber(value: number, dp = 1): string {
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: dp,
+    maximumFractionDigits: dp,
+  });
+}
+
+function formatEnergyKwh(value: number): string {
+  if (value >= 1000) return `${formatNumber(value / 1000, 2)} MWh`;
+  return `${formatNumber(value, 0)} kWh`;
+}
+
+function buildLinePath(points: { x: number; y: number }[]): string {
+  if (!points.length) return "";
+  return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+}
+
+function buildAreaPath(points: { x: number; y: number }[], baseline: number): string {
+  if (!points.length) return "";
+  const first = points[0];
+  const last = points[points.length - 1];
+  const line = buildLinePath(points);
+  return `${line} L ${last.x} ${baseline} L ${first.x} ${baseline} Z`;
+}
+
+function formatTooltipTime(ts: string): string {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return ts;
+  return d.toLocaleString(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatAxisDate(ts: string): string {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return ts.slice(5, 10);
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
 
 export default function JuggleEnergyDashboardPrototype() {
   const pathname = usePathname();
+  const chartWrapRef = useRef<HTMLDivElement | null>(null);
+
   const [heroCollapsed, setHeroCollapsed] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
-  const [dateFrom, setDateFrom] = useState("2026-03-18");
-  const [dateTo, setDateTo] = useState("2026-03-24");
+
+  const [rawRows, setRawRows] = useState<CsvRow[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  const [dataMinDate, setDataMinDate] = useState("");
+  const [dataMaxDate, setDataMaxDate] = useState("");
+
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [rangeLabel, setRangeLabel] = useState("7D");
+
+  const [hovered, setHovered] = useState<HoverPoint | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("dashboard-hero-collapsed");
     if (saved === "true") setHeroCollapsed(true);
     setHeroReady(true);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCsv() {
+      try {
+        setLoadingData(true);
+        setDataError(null);
+
+        const res = await fetch("/data/site-data-15min.csv");
+        if (!res.ok) {
+          throw new Error("Could not load CSV from /public/data/site-data-15min.csv");
+        }
+
+        const text = await res.text();
+        const lines = text
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        if (lines.length < 2) throw new Error("CSV appears to be empty.");
+
+        const headers = lines[0].split(",");
+
+        const timestampIdx = headers.findIndex((h) => h.includes("Date / Time"));
+        const importKwhRelIdx = headers.findIndex((h) =>
+          h.includes("Import/Export Meter Import / kWh (Relative)"),
+        );
+        const importKwIdx = headers.findIndex((h) =>
+          h.includes("Import/Export Meter Power / kW"),
+        );
+        const exportKwhRelIdx = headers.findIndex((h) =>
+          h.includes("Import/Export Meter Export / kWh (Relative)"),
+        );
+        const generationKwhRelIdx = headers.findIndex((h) =>
+          h.includes("Inverter 1 Gen Meter Generation / kWh (Relative)"),
+        );
+
+        if (timestampIdx === -1) throw new Error("Could not find the Date / Time column.");
+        if (generationKwhRelIdx === -1) {
+          throw new Error("Could not find the generation relative kWh column.");
+        }
+
+        const parsed: CsvRow[] = lines.slice(1).map((line) => {
+          const cols = line.split(",");
+          const timestamp = cols[timestampIdx] || "";
+          const day = timestamp.slice(0, 10);
+          const generationKwhRel = parseNum(cols[generationKwhRelIdx]);
+
+          return {
+            timestamp,
+            day,
+            importKwhRel: importKwhRelIdx >= 0 ? parseNum(cols[importKwhRelIdx]) : 0,
+            importKw: importKwIdx >= 0 ? parseNum(cols[importKwIdx]) : 0,
+            exportKwhRel: exportKwhRelIdx >= 0 ? parseNum(cols[exportKwhRelIdx]) : 0,
+            generationKwhRel,
+            generationKw: generationKwhRel * 4,
+          };
+        });
+
+        const validRows = parsed.filter((r) => r.day);
+        if (!validRows.length) throw new Error("No valid data rows were found.");
+
+        const minDate = validRows[0].day;
+        const maxDate = validRows[validRows.length - 1].day;
+
+        if (!cancelled) {
+          setRawRows(validRows);
+          setDataMinDate(minDate);
+          setDataMaxDate(maxDate);
+
+          const defaultTo = maxDate;
+          const defaultFrom = clampDate(shiftDate(maxDate, -6), minDate, maxDate);
+
+          setDateFrom(defaultFrom);
+          setDateTo(defaultTo);
+          setRangeLabel("7D");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setDataError(err instanceof Error ? err.message : "Failed to load data.");
+        }
+      } finally {
+        if (!cancelled) setLoadingData(false);
+      }
+    }
+
+    loadCsv();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const toggleHero = () => {
@@ -25,23 +225,46 @@ export default function JuggleEnergyDashboardPrototype() {
   };
 
   const setPresetRange = (preset: "7D" | "30D" | "MTD" | "YTD") => {
+    if (!dataMaxDate || !dataMinDate) return;
+
     setRangeLabel(preset);
+
     if (preset === "7D") {
-      setDateFrom("2026-03-18");
-      setDateTo("2026-03-24");
+      setDateFrom(clampDate(shiftDate(dataMaxDate, -6), dataMinDate, dataMaxDate));
+      setDateTo(dataMaxDate);
     } else if (preset === "30D") {
-      setDateFrom("2026-02-24");
-      setDateTo("2026-03-24");
+      setDateFrom(clampDate(shiftDate(dataMaxDate, -29), dataMinDate, dataMaxDate));
+      setDateTo(dataMaxDate);
     } else if (preset === "MTD") {
-      setDateFrom("2026-03-01");
-      setDateTo("2026-03-24");
+      const startOfMonth = `${dataMaxDate.slice(0, 8)}01`;
+      setDateFrom(clampDate(startOfMonth, dataMinDate, dataMaxDate));
+      setDateTo(dataMaxDate);
     } else if (preset === "YTD") {
-      setDateFrom("2026-01-01");
-      setDateTo("2026-03-24");
+      const startOfYear = `${dataMaxDate.slice(0, 4)}-01-01`;
+      setDateFrom(clampDate(startOfYear, dataMinDate, dataMaxDate));
+      setDateTo(dataMaxDate);
     }
   };
 
-  const devices = [
+  const filteredRows = useMemo(() => {
+    if (!dateFrom || !dateTo) return [];
+    return rawRows.filter((row) => row.day >= dateFrom && row.day <= dateTo);
+  }, [rawRows, dateFrom, dateTo]);
+
+  const totalGenerationKwh = useMemo(
+    () => filteredRows.reduce((sum, r) => sum + r.generationKwhRel, 0),
+    [filteredRows],
+  );
+
+  const averagePerDayKwh = useMemo(() => {
+    const days = Math.max(1, daysBetweenInclusive(dateFrom || "2026-01-01", dateTo || "2026-01-01"));
+    return totalGenerationKwh / days;
+  }, [dateFrom, dateTo, totalGenerationKwh]);
+
+  const selectedPeriodLabel =
+    rangeLabel === "Custom" ? `${daysBetweenInclusive(dateFrom, dateTo)} days` : rangeLabel;
+
+  const devices: Device[] = [
     { name: "Inverter 1", type: "Inverter", status: "Online", read: "18.5 kW" },
     { name: "Inverter 2", type: "Inverter", status: "Online", read: "18.8 kW" },
     { name: "Meter 1", type: "Meter", status: "Online", read: "156.0 kW" },
@@ -65,6 +288,91 @@ export default function JuggleEnergyDashboardPrototype() {
     { name: "Staff", href: "#" },
     { name: "Billing", href: "#" },
   ];
+
+  const chartWidth = 760;
+  const chartHeight = 220;
+  const padLeft = 50;
+  const padRight = 14;
+  const padTop = 12;
+  const padBottom = 32;
+  const plotWidth = chartWidth - padLeft - padRight;
+  const plotHeight = chartHeight - padTop - padBottom;
+
+  const maxYRaw = Math.max(
+    1,
+    ...filteredRows.flatMap((r) => [r.generationKw, r.importKw]),
+  );
+  const maxY = Math.ceil(maxYRaw / 10) * 10;
+
+  const generationPoints = filteredRows.map((r, idx) => ({
+    x:
+      padLeft +
+      (filteredRows.length <= 1 ? plotWidth / 2 : (idx / (filteredRows.length - 1)) * plotWidth),
+    y: padTop + plotHeight - (r.generationKw / maxY) * plotHeight,
+  }));
+
+  const importPoints = filteredRows.map((r, idx) => ({
+    x:
+      padLeft +
+      (filteredRows.length <= 1 ? plotWidth / 2 : (idx / (filteredRows.length - 1)) * plotWidth),
+    y: padTop + plotHeight - (r.importKw / maxY) * plotHeight,
+  }));
+
+  const generationLine = buildLinePath(generationPoints);
+  const generationArea = buildAreaPath(generationPoints, padTop + plotHeight);
+  const importLine = buildLinePath(importPoints);
+
+  const xTickIndices = useMemo(() => {
+    if (filteredRows.length === 0) return [];
+    const tickCount = 6;
+    const idxs = [];
+    for (let i = 0; i < tickCount; i++) {
+      const idx = Math.round((i / (tickCount - 1)) * (filteredRows.length - 1));
+      idxs.push(idx);
+    }
+    return Array.from(new Set(idxs));
+  }, [filteredRows.length]);
+
+  const yTicks = [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY];
+
+  const hoverIndexFromClientX = (clientX: number) => {
+    if (!chartWrapRef.current || filteredRows.length === 0) return null;
+    const rect = chartWrapRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const normalized = Math.max(0, Math.min(rect.width, x));
+    const ratio = rect.width > 0 ? normalized / rect.width : 0;
+    const idx = Math.round(ratio * (filteredRows.length - 1));
+    return Math.max(0, Math.min(filteredRows.length - 1, idx));
+  };
+
+  const updateHover = (index: number) => {
+    const row = filteredRows[index];
+    if (!row) return;
+
+    const x =
+      padLeft +
+      (filteredRows.length <= 1 ? plotWidth / 2 : (index / (filteredRows.length - 1)) * plotWidth);
+    const yGeneration = padTop + plotHeight - (row.generationKw / maxY) * plotHeight;
+    const yImport = padTop + plotHeight - (row.importKw / maxY) * plotHeight;
+
+    setHovered({
+      index,
+      x,
+      yGeneration,
+      yImport,
+      row,
+    });
+  };
+
+  const handleChartMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const idx = hoverIndexFromClientX(e.clientX);
+    if (idx === null) return;
+    updateHover(idx);
+  };
+
+  const handleChartMouseLeave = () => {
+    setHovered(null);
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -230,7 +538,7 @@ export default function JuggleEnergyDashboardPrototype() {
               <div>
                 <h2 className="text-2xl font-semibold">Weekly Energy</h2>
                 <div className="mt-1 text-sm text-slate-500">
-                  Select a custom reporting period
+                  15-minute site data with hover readout
                 </div>
               </div>
 
@@ -256,6 +564,8 @@ export default function JuggleEnergyDashboardPrototype() {
                     <label className="block text-xs text-slate-500">From</label>
                     <input
                       type="date"
+                      min={dataMinDate || undefined}
+                      max={dataMaxDate || undefined}
                       value={dateFrom}
                       onChange={(e) => {
                         setDateFrom(e.target.value);
@@ -268,6 +578,8 @@ export default function JuggleEnergyDashboardPrototype() {
                     <label className="block text-xs text-slate-500">To</label>
                     <input
                       type="date"
+                      min={dataMinDate || undefined}
+                      max={dataMaxDate || undefined}
                       value={dateTo}
                       onChange={(e) => {
                         setDateTo(e.target.value);
@@ -280,30 +592,193 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
             </div>
 
-            <div className="relative h-52 overflow-hidden rounded-2xl bg-slate-50">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.15)_1px,transparent_1px),linear-gradient(to_top,rgba(148,163,184,0.15)_1px,transparent_1px)] bg-[size:48px_48px]" />
-              <svg viewBox="0 0 700 220" className="absolute inset-0 h-full w-full">
-                <path
-                  d="M0 195 C 90 195, 130 182, 190 140 S 300 40, 390 62 S 500 190, 560 182 S 610 96, 700 118"
-                  fill="rgba(163,191,89,0.18)"
-                  stroke="rgba(132,153,52,0.95)"
-                  strokeWidth="4"
-                />
-              </svg>
+            <div className="mb-3 flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-2 text-slate-600">
+                <span className="inline-block h-3 w-3 rounded-full bg-lime-600" />
+                Generation kW
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
+                Import kW
+              </div>
+            </div>
+
+            <div
+              ref={chartWrapRef}
+              className="relative overflow-hidden rounded-2xl bg-slate-50"
+              onMouseMove={handleChartMouseMove}
+              onMouseLeave={handleChartMouseLeave}
+            >
+              {loadingData ? (
+                <div className="flex h-56 items-center justify-center text-slate-500">
+                  Loading 15-minute data…
+                </div>
+              ) : dataError ? (
+                <div className="flex h-56 items-center justify-center px-6 text-center text-red-600">
+                  {dataError}
+                </div>
+              ) : filteredRows.length === 0 ? (
+                <div className="flex h-56 items-center justify-center text-slate-500">
+                  No data in selected date range.
+                </div>
+              ) : (
+                <>
+                  <svg
+                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                    className="h-56 w-full"
+                    preserveAspectRatio="none"
+                  >
+                    {yTicks.map((tick, i) => {
+                      const y = padTop + plotHeight - (tick / maxY) * plotHeight;
+                      return (
+                        <g key={i}>
+                          <line
+                            x1={padLeft}
+                            y1={y}
+                            x2={chartWidth - padRight}
+                            y2={y}
+                            stroke="rgba(148,163,184,0.18)"
+                            strokeWidth="1"
+                          />
+                          <text
+                            x={padLeft - 8}
+                            y={y + 4}
+                            textAnchor="end"
+                            fontSize="11"
+                            fill="#64748b"
+                          >
+                            {Math.round(tick)}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    {xTickIndices.map((idx) => {
+                      const x =
+                        padLeft +
+                        (filteredRows.length <= 1
+                          ? plotWidth / 2
+                          : (idx / (filteredRows.length - 1)) * plotWidth);
+                      return (
+                        <g key={idx}>
+                          <line
+                            x1={x}
+                            y1={padTop}
+                            x2={x}
+                            y2={padTop + plotHeight}
+                            stroke="rgba(148,163,184,0.12)"
+                            strokeWidth="1"
+                          />
+                          <text
+                            x={x}
+                            y={chartHeight - 8}
+                            textAnchor="middle"
+                            fontSize="11"
+                            fill="#64748b"
+                          >
+                            {formatAxisDate(filteredRows[idx].timestamp)}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    <text
+                      x={18}
+                      y={padTop - 2}
+                      fontSize="11"
+                      fill="#64748b"
+                    >
+                      kW
+                    </text>
+
+                    <path d={generationArea} fill="rgba(132,153,52,0.14)" />
+                    <path
+                      d={generationLine}
+                      fill="none"
+                      stroke="rgba(132,153,52,0.98)"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d={importLine}
+                      fill="none"
+                      stroke="rgba(245,158,11,0.92)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+
+                    {hovered && (
+                      <>
+                        <line
+                          x1={hovered.x}
+                          y1={padTop}
+                          x2={hovered.x}
+                          y2={padTop + plotHeight}
+                          stroke="rgba(15,23,42,0.35)"
+                          strokeDasharray="4 4"
+                        />
+                        <circle
+                          cx={hovered.x}
+                          cy={hovered.yGeneration}
+                          r="4"
+                          fill="rgba(132,153,52,1)"
+                          stroke="white"
+                          strokeWidth="2"
+                        />
+                        <circle
+                          cx={hovered.x}
+                          cy={hovered.yImport}
+                          r="4"
+                          fill="rgba(245,158,11,1)"
+                          stroke="white"
+                          strokeWidth="2"
+                        />
+                      </>
+                    )}
+                  </svg>
+
+                  {hovered && (
+                    <div
+                      className="pointer-events-none absolute z-10 rounded-2xl bg-white px-4 py-3 text-sm shadow-lg ring-1 ring-slate-200"
+                      style={{
+                        left: `min(calc(${(hovered.x / chartWidth) * 100}% + 12px), calc(100% - 220px))`,
+                        top: "12px",
+                      }}
+                    >
+                      <div className="font-semibold text-slate-900">
+                        {formatTooltipTime(hovered.row.timestamp)}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2 text-slate-700">
+                        <span className="inline-block h-3 w-3 rounded-full bg-lime-600" />
+                        Generation: <span className="font-semibold">{formatNumber(hovered.row.generationKw, 2)} kW</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 text-slate-700">
+                        <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
+                        Import: <span className="font-semibold">{formatNumber(hovered.row.importKw, 2)} kW</span>
+                      </div>
+                      <div className="mt-1 text-slate-600">
+                        Interval energy: <span className="font-semibold">{formatNumber(hovered.row.generationKwhRel, 4)} kWh</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <div className="text-sm text-slate-500">Range Energy</div>
-                <div className="text-xl font-semibold">4.3 MWh</div>
+                <div className="text-xl font-semibold">{formatEnergyKwh(totalGenerationKwh)}</div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <div className="text-sm text-slate-500">Average / day</div>
-                <div className="text-xl font-semibold">614 kWh</div>
+                <div className="text-xl font-semibold">{formatEnergyKwh(averagePerDayKwh)}</div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <div className="text-sm text-slate-500">Selected Period</div>
-                <div className="text-xl font-semibold">{rangeLabel === "Custom" ? "Custom" : rangeLabel}</div>
+                <div className="text-xl font-semibold">{selectedPeriodLabel}</div>
               </div>
             </div>
           </div>
