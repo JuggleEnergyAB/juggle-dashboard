@@ -535,14 +535,12 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute left-6 top-5.5 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Irradiance
                 </div>
                 <div className="mt-1 text-xl font-semibold text-slate-900">722 W/m²</div>
               </div>
 
               <div className="absolute left-[170px] top-[20px] rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                  Solar Power
                 </div>
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   102.4
@@ -552,7 +550,6 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute left-1/2 top-4.5 -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                  Building load
                 </div>
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   156
@@ -562,7 +559,6 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute right-12 top-5 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                  Grid
                 </div>
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   53.6
@@ -677,15 +673,15 @@ export default function JuggleEnergyDashboardPrototype() {
     },
     {
       title: "Grid Export",
-      now: "48.1 kW",
+      now: "0.00 kW",
       sub: "640 kWh today",
       accent: "bg-blue-500",
       text: "text-blue-600",
     },
     {
-      title: "Total Consumption",
+      title: "Consumption",
       now: "156 kW",
-      sub: "1.58 MWh today",
+      sub: "1.58 MWh oday",
       accent: "bg-purple-500",
       text: "text-purple-600",
     },
@@ -766,9 +762,9 @@ export default function JuggleEnergyDashboardPrototype() {
       <h2 className="text-2xl font-semibold">Critical Alarms</h2>
       <div className="mt-3 space-y-2">
         {[
-          "Inverter 3 offline",
-          "Grid import high",
-          "Weather station stale data",
+          "Inverter 3 offline - Last read - 18:23 25/03/26",
+          "Grid Export Limit Breach - 12:03 26/03/26",
+          "Weather station - Wind speed no reading - 08:02 01/03/26",
         ].map((alarm) => (
           <div
             key={alarm}
