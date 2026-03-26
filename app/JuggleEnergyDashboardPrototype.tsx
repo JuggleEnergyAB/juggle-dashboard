@@ -596,23 +596,27 @@ export default function JuggleEnergyDashboardPrototype() {
                 </defs>
 
 
-                <circle r="6.8" fill="rgba(252, 236, 179, 0.98)" filter="url(#sparkGlow)">
-                  <animateMotion
-                    dur="3.4s"
-                    begin="0s;gridspark.end+8s"
-                    repeatCount="indefinite"
-                    rotate="auto"
-                    path="M930 118 C 845 118, 770 118, 690 118"
-                  />
-                  <animate
-                    id="gridspark"
-                    attributeName="opacity"
-                    values="0;1;1;0"
-                    dur="3.4s"
-                    begin="0s;gridspark.end+8s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
+                <g filter="url(#sparkGlow)">
+  <path
+    d="M -4 -6 L 1 -2 L -1 -2 L 4 6 L -1 2 L 1 2 Z"
+    fill="rgba(252, 236, 179, 0.98)"
+  />
+  <animateMotion
+    dur="3.9s"
+    begin="0s;gridspark.end+8s"
+    repeatCount="indefinite"
+    rotate="auto"
+    path="M930 118 C 845 118, 770 118, 690 118"
+  />
+  <animate
+    id="gridspark"
+    attributeName="opacity"
+    values="0;1;1;0"
+    dur="3.9s"
+    begin="0s;gridspark.end+8s"
+    repeatCount="indefinite"
+  />
+</g>
               </svg>
             </div>
           </section>
