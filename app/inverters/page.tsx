@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef, useState } from "react";
 
 type Inverter = {
   id: string;
@@ -205,9 +206,19 @@ function getHeatColor(value: number) {
 
 export default function InvertersPage() {
   const pathname = usePathname();
+  const [selectedInverter, setSelectedInverter] = useState<number | null>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const onlineCount = inverters.filter((i) => i.status === "On grid").length;
   const offlineCount = inverters.filter((i) => i.status === "Offline").length;
+
+  const selectInverter = (index: number) => {
+    setSelectedInverter(index);
+    const el = cardRefs.current[index];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -278,7 +289,7 @@ export default function InvertersPage() {
             <div>
               <h2 className="text-2xl font-semibold">Inverter String / MPPT Heatmap</h2>
               <p className="mt-1 text-sm text-slate-500">
-                DC Power view across MPPT inputs for each inverter
+                Click any inverter row or cell to jump to its detailed performance card
               </p>
             </div>
 
@@ -338,24 +349,38 @@ export default function InvertersPage() {
                     key={rowIndex}
                     className="grid grid-cols-[220px_repeat(12,minmax(0,1fr))] gap-2"
                   >
-                    <div className="flex items-center rounded-2xl bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => selectInverter(rowIndex)}
+                      className={`flex items-center rounded-2xl px-3 py-2 text-left text-sm ring-1 transition ${
+                        selectedInverter === rowIndex
+                          ? "bg-fuchsia-50 ring-fuchsia-300"
+                          : "bg-slate-50 ring-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
                       <div>
                         <div className="font-medium">{inverters[rowIndex].name}</div>
                         <div className="text-slate-500">{inverters[rowIndex].serial}</div>
                       </div>
-                    </div>
+                    </button>
 
                     {row.map((value, colIndex) => {
                       const style = getHeatColor(value);
 
                       return (
-                        <div
+                        <button
                           key={colIndex}
-                          className={`flex h-14 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm ${style.bg} ${style.text} ${style.border}`}
+                          type="button"
+                          onClick={() => selectInverter(rowIndex)}
+                          className={`flex h-14 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition hover:scale-[1.02] ${style.bg} ${style.text} ${style.border} ${
+                            selectedInverter === rowIndex
+                              ? "ring-2 ring-fuchsia-300"
+                              : ""
+                          }`}
                           title={`${inverters[rowIndex].name} / MPPT ${colIndex + 1}: ${value} W`}
                         >
                           {value === 0 ? "—" : value}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -387,10 +412,17 @@ export default function InvertersPage() {
           </div>
 
           <div className="space-y-4">
-            {inverters.map((inv) => (
+            {inverters.map((inv, index) => (
               <div
                 key={inv.id}
-                className="rounded-3xl border border-slate-200 bg-white p-5"
+                ref={(el) => {
+                  cardRefs.current[index] = el;
+                }}
+                className={`rounded-3xl border bg-white p-5 transition ${
+                  selectedInverter === index
+                    ? "border-fuchsia-300 ring-2 ring-fuchsia-200"
+                    : "border-slate-200"
+                }`}
               >
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
