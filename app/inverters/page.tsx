@@ -153,26 +153,54 @@ const inverters: Inverter[] = [
   },
 ];
 
-const mpptHeaders = Array.from({ length: 20 }, (_, i) => i + 1);
+const mpptHeaders = Array.from({ length: 12 }, (_, i) => i + 1);
 
 const heatmapValues: number[][] = [
-  [210, 208, 205, 204, 203, 202, 204, 205, 188, 182, 179, 0, 0, 198, 194, 191, 190, 193, 196, 199],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [120, 121, 119, 118, 117, 118, 119, 120, 110, 108, 107, 0, 116, 115, 114, 113, 112, 111, 110, 109],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [132, 131, 130, 129, 128, 127, 128, 129, 126, 124, 123, 0, 125, 124, 123, 122, 121, 120, 119, 118],
-  [128, 127, 126, 125, 124, 123, 124, 125, 120, 119, 118, 0, 121, 120, 119, 118, 117, 116, 115, 114],
-  [124, 123, 122, 121, 120, 119, 120, 121, 116, 115, 114, 0, 117, 116, 115, 114, 113, 112, 111, 110],
-  [118, 117, 116, 115, 114, 113, 114, 115, 110, 109, 108, 0, 111, 110, 109, 108, 107, 106, 105, 104],
+  [520, 515, 508, 502, 498, 492, 486, 475, 468, 460, 454, 448],
+  [505, 500, 494, 489, 482, 478, 470, 462, 455, 448, 441, 435],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [498, 494, 489, 482, 478, 472, 466, 460, 454, 448, 441, 438],
+  [487, 482, 478, 472, 466, 460, 454, 448, 442, 436, 431, 425],
+  [512, 506, 500, 494, 488, 482, 476, 470, 464, 458, 452, 446],
+  [493, 487, 481, 475, 470, 464, 458, 452, 446, 439, 433, 427],
+  [479, 473, 468, 462, 456, 451, 445, 439, 433, 427, 421, 416],
+  [468, 462, 456, 450, 444, 438, 432, 426, 420, 414, 408, 402],
 ];
 
-function cellStyle(value: number) {
-  if (value === 0) return "bg-[#05384d] text-white";
-  if (value >= 190) return "bg-[#cb8cc1] text-slate-900";
-  if (value >= 150) return "bg-[#a47dad] text-white";
-  if (value >= 110) return "bg-[#746d92] text-white";
-  return "bg-[#5f638a] text-white";
+function getHeatColor(value: number) {
+  if (value === 0) {
+    return {
+      bg: "bg-slate-200",
+      text: "text-slate-500",
+      border: "border-slate-300",
+    };
+  }
+  if (value >= 500) {
+    return {
+      bg: "bg-emerald-500/90",
+      text: "text-white",
+      border: "border-emerald-600",
+    };
+  }
+  if (value >= 470) {
+    return {
+      bg: "bg-emerald-400/85",
+      text: "text-slate-900",
+      border: "border-emerald-500",
+    };
+  }
+  if (value >= 440) {
+    return {
+      bg: "bg-sky-300/85",
+      text: "text-slate-900",
+      border: "border-sky-400",
+    };
+  }
+  return {
+    bg: "bg-indigo-300/85",
+    text: "text-slate-900",
+    border: "border-indigo-400",
+  };
 }
 
 export default function InvertersPage() {
@@ -242,71 +270,104 @@ export default function InvertersPage() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8 space-y-6">
+      <main className="mx-auto max-w-7xl space-y-6 px-6 py-8">
         <div className="text-2xl font-semibold">Inverters</div>
 
-        <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-2xl font-semibold">Inverter String / MPPT Heatmap</h2>
-              <div className="mt-1 text-sm text-slate-500">DC Power (String / MPPT)</div>
+              <p className="mt-1 text-sm text-slate-500">
+                DC Power view across MPPT inputs for each inverter
+              </p>
             </div>
 
-            <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-700">
+            <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-700 shadow-sm">
               25/03/2026
             </div>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-3">
-            <div className="rounded-xl border border-slate-700 bg-[#cb8cc1] px-4 py-2 text-slate-900 shadow-sm">
-              ○ DC Power / W
+          <div className="mb-5 flex flex-wrap gap-3">
+            <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+              ● DC Power / W
             </div>
-            <div className="rounded-xl border border-slate-300 bg-[#d7df88] px-4 py-2 text-slate-900 shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500">
               ○ DC Voltage / V
             </div>
-            <div className="rounded-xl border border-slate-300 bg-[#e9a79a] px-4 py-2 text-slate-900 shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-500">
               ○ DC Current / A
             </div>
           </div>
 
+          <div className="mb-4 flex flex-wrap gap-3 text-sm">
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+              <span className="inline-block h-3 w-3 rounded-full bg-emerald-500" />
+              <span>High output</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+              <span className="inline-block h-3 w-3 rounded-full bg-sky-300" />
+              <span>Normal output</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+              <span className="inline-block h-3 w-3 rounded-full bg-indigo-300" />
+              <span>Lower output</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+              <span className="inline-block h-3 w-3 rounded-full bg-slate-300" />
+              <span>Offline / zero</span>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
-            <div className="min-w-[1080px]">
-              <div className="mb-2 grid grid-cols-[200px_repeat(20,minmax(0,1fr))] gap-0">
+            <div className="min-w-[980px]">
+              <div className="mb-2 grid grid-cols-[220px_repeat(12,minmax(0,1fr))] gap-2">
                 <div />
                 {mpptHeaders.map((h) => (
-                  <div key={h} className="px-1 text-center text-sm text-slate-700">
+                  <div
+                    key={h}
+                    className="text-center text-sm font-medium text-slate-600"
+                  >
                     {h}
                   </div>
                 ))}
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {heatmapValues.map((row, rowIndex) => (
                   <div
                     key={rowIndex}
-                    className="grid grid-cols-[200px_repeat(20,minmax(0,1fr))] gap-1"
+                    className="grid grid-cols-[220px_repeat(12,minmax(0,1fr))] gap-2"
                   >
-                    <div className="flex items-center pr-2 text-sm text-slate-800">
-                      {inverters[rowIndex].name} {inverters[rowIndex].serial}
+                    <div className="flex items-center rounded-2xl bg-slate-50 px-3 py-2 text-sm ring-1 ring-slate-200">
+                      <div>
+                        <div className="font-medium">{inverters[rowIndex].name}</div>
+                        <div className="text-slate-500">{inverters[rowIndex].serial}</div>
+                      </div>
                     </div>
 
-                    {row.map((value, colIndex) => (
-                      <div
-                        key={colIndex}
-                        className={`h-10 rounded-sm ${cellStyle(value)}`}
-                        title={`${inverters[rowIndex].name} / MPPT ${colIndex + 1}: ${value} W`}
-                      />
-                    ))}
+                    {row.map((value, colIndex) => {
+                      const style = getHeatColor(value);
+
+                      return (
+                        <div
+                          key={colIndex}
+                          className={`flex h-14 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm ${style.bg} ${style.text} ${style.border}`}
+                          title={`${inverters[rowIndex].name} / MPPT ${colIndex + 1}: ${value} W`}
+                        >
+                          {value === 0 ? "—" : value}
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
 
               <div className="mt-5">
-                <div className="mb-2 flex items-center justify-between text-sm text-slate-700">
-                  <span>5,812.026</span>
-                  <span>0</span>
+                <div className="mb-2 flex items-center justify-between text-sm text-slate-600">
+                  <span>0 W</span>
+                  <span>520 W</span>
                 </div>
-                <div className="h-4 rounded-full bg-gradient-to-r from-[#cb8cc1] via-[#746d92] to-[#05384d]" />
+                <div className="h-4 rounded-full bg-gradient-to-r from-slate-300 via-indigo-300 via-sky-300 to-emerald-500" />
               </div>
             </div>
           </div>
