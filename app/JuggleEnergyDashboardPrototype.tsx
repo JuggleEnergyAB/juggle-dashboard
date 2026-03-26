@@ -595,17 +595,10 @@ export default function JuggleEnergyDashboardPrototype() {
                   </filter>
                 </defs>
 
-                <path
-                  d="M930 118 C 845 118, 770 118, 690 118"
-                  fill="none"
-                  stroke="rgba(30,41,59,0.55)"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
 
-                <circle r="4.8" fill="rgba(250,204,21,0.98)" filter="url(#sparkGlow)">
+                <circle r="6.8" fill="rgba(252, 236, 179, 0.98)" filter="url(#sparkGlow)">
                   <animateMotion
-                    dur="2.4s"
+                    dur="3.4s"
                     begin="0s;gridspark.end+8s"
                     repeatCount="indefinite"
                     rotate="auto"
@@ -615,7 +608,7 @@ export default function JuggleEnergyDashboardPrototype() {
                     id="gridspark"
                     attributeName="opacity"
                     values="0;1;1;0"
-                    dur="2.4s"
+                    dur="3.4s"
                     begin="0s;gridspark.end+8s"
                     repeatCount="indefinite"
                   />
