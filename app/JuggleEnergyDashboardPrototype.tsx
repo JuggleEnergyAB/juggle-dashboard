@@ -95,8 +95,8 @@ function formatAxisDate(ts: string): string {
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return ts.slice(5, 10);
   return d.toLocaleDateString(undefined, {
-    day: "2-digit",
     month: "2-digit",
+    day: "2-digit",
   });
 }
 
@@ -289,19 +289,16 @@ export default function JuggleEnergyDashboardPrototype() {
     { name: "Billing", href: "#" },
   ];
 
-  const chartWidth = 760;
-  const chartHeight = 220;
-  const padLeft = 50;
-  const padRight = 14;
-  const padTop = 12;
-  const padBottom = 32;
+  const chartWidth = 860;
+  const chartHeight = 260;
+  const padLeft = 58;
+  const padRight = 18;
+  const padTop = 18;
+  const padBottom = 34;
   const plotWidth = chartWidth - padLeft - padRight;
   const plotHeight = chartHeight - padTop - padBottom;
 
-  const maxYRaw = Math.max(
-    1,
-    ...filteredRows.flatMap((r) => [r.generationKw, r.importKw]),
-  );
+  const maxYRaw = Math.max(1, ...filteredRows.flatMap((r) => [r.generationKw, r.importKw]));
   const maxY = Math.ceil(maxYRaw / 10) * 10;
 
   const generationPoints = filteredRows.map((r, idx) => ({
@@ -325,7 +322,7 @@ export default function JuggleEnergyDashboardPrototype() {
   const xTickIndices = useMemo(() => {
     if (filteredRows.length === 0) return [];
     const tickCount = 6;
-    const idxs = [];
+    const idxs: number[] = [];
     for (let i = 0; i < tickCount; i++) {
       const idx = Math.round((i / (tickCount - 1)) * (filteredRows.length - 1));
       idxs.push(idx);
@@ -532,7 +529,7 @@ export default function JuggleEnergyDashboardPrototype() {
           ))}
         </section>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1.05fr,0.95fr]">
+        <section className="mt-6 grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
           <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -605,27 +602,27 @@ export default function JuggleEnergyDashboardPrototype() {
 
             <div
               ref={chartWrapRef}
-              className="relative overflow-hidden rounded-2xl bg-slate-50"
+              className="relative overflow-hidden rounded-2xl bg-slate-50 p-3"
               onMouseMove={handleChartMouseMove}
               onMouseLeave={handleChartMouseLeave}
             >
               {loadingData ? (
-                <div className="flex h-56 items-center justify-center text-slate-500">
+                <div className="flex h-64 items-center justify-center text-slate-500">
                   Loading 15-minute data…
                 </div>
               ) : dataError ? (
-                <div className="flex h-56 items-center justify-center px-6 text-center text-red-600">
+                <div className="flex h-64 items-center justify-center px-6 text-center text-red-600">
                   {dataError}
                 </div>
               ) : filteredRows.length === 0 ? (
-                <div className="flex h-56 items-center justify-center text-slate-500">
+                <div className="flex h-64 items-center justify-center text-slate-500">
                   No data in selected date range.
                 </div>
               ) : (
                 <>
                   <svg
                     viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    className="h-56 w-full"
+                    className="h-64 w-full"
                     preserveAspectRatio="none"
                   >
                     {yTicks.map((tick, i) => {
@@ -641,7 +638,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             strokeWidth="1"
                           />
                           <text
-                            x={padLeft - 8}
+                            x={padLeft - 10}
                             y={y + 4}
                             textAnchor="end"
                             fontSize="11"
@@ -682,12 +679,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       );
                     })}
 
-                    <text
-                      x={18}
-                      y={padTop - 2}
-                      fontSize="11"
-                      fill="#64748b"
-                    >
+                    <text x={padLeft - 6} y={padTop - 4} fontSize="11" fill="#64748b">
                       kW
                     </text>
 
@@ -743,8 +735,8 @@ export default function JuggleEnergyDashboardPrototype() {
                     <div
                       className="pointer-events-none absolute z-10 rounded-2xl bg-white px-4 py-3 text-sm shadow-lg ring-1 ring-slate-200"
                       style={{
-                        left: `min(calc(${(hovered.x / chartWidth) * 100}% + 12px), calc(100% - 220px))`,
-                        top: "12px",
+                        left: `min(calc(${(hovered.x / chartWidth) * 100}% + 18px), calc(100% - 230px))`,
+                        top: "14px",
                       }}
                     >
                       <div className="font-semibold text-slate-900">
@@ -752,14 +744,23 @@ export default function JuggleEnergyDashboardPrototype() {
                       </div>
                       <div className="mt-2 flex items-center gap-2 text-slate-700">
                         <span className="inline-block h-3 w-3 rounded-full bg-lime-600" />
-                        Generation: <span className="font-semibold">{formatNumber(hovered.row.generationKw, 2)} kW</span>
+                        Generation:{" "}
+                        <span className="font-semibold">
+                          {formatNumber(hovered.row.generationKw, 2)} kW
+                        </span>
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-slate-700">
                         <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
-                        Import: <span className="font-semibold">{formatNumber(hovered.row.importKw, 2)} kW</span>
+                        Import:{" "}
+                        <span className="font-semibold">
+                          {formatNumber(hovered.row.importKw, 2)} kW
+                        </span>
                       </div>
                       <div className="mt-1 text-slate-600">
-                        Interval energy: <span className="font-semibold">{formatNumber(hovered.row.generationKwhRel, 4)} kWh</span>
+                        Interval energy:{" "}
+                        <span className="font-semibold">
+                          {formatNumber(hovered.row.generationKwhRel, 4)} kWh
+                        </span>
                       </div>
                     </div>
                   )}
