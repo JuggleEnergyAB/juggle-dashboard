@@ -26,6 +26,8 @@ type HoverPoint = {
   x: number;
   yGeneration: number;
   yImport: number;
+  tooltipLeft: number;
+  tooltipTop: number;
   row: CsvRow;
 };
 
@@ -297,11 +299,11 @@ export default function JuggleEnergyDashboardPrototype() {
   ];
 
   const chartWidth = 860;
-  const chartHeight = 280;
-  const padLeft = 62;
-  const padRight = 18;
-  const padTop = 18;
-  const padBottom = 46;
+  const chartHeight = 310;
+  const padLeft = 68;
+  const padRight = 22;
+  const padTop = 22;
+  const padBottom = 54;
   const plotWidth = chartWidth - padLeft - padRight;
   const plotHeight = chartHeight - padTop - padBottom;
 
@@ -370,7 +372,7 @@ export default function JuggleEnergyDashboardPrototype() {
     return Math.max(0, Math.min(filteredRows.length - 1, idx));
   };
 
-  const updateHover = (index: number) => {
+  const updateHover = (index: number, clientX?: number, clientY?: number) => {
     const row = filteredRows[index];
     if (!row) return;
 
@@ -378,11 +380,25 @@ export default function JuggleEnergyDashboardPrototype() {
       padLeft +
       (filteredRows.length <= 1 ? plotWidth / 2 : (index / (filteredRows.length - 1)) * plotWidth);
 
+    let tooltipLeft = 20;
+    let tooltipTop = 20;
+
+    if (chartWrapRef.current && clientX !== undefined && clientY !== undefined) {
+      const rect = chartWrapRef.current.getBoundingClientRect();
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+
+      tooltipLeft = Math.min(localX + 18, rect.width - 250);
+      tooltipTop = Math.max(12, Math.min(localY - 20, rect.height - 130));
+    }
+
     setHovered({
       index,
       x,
       yGeneration: valueToY(row.generationKw),
       yImport: valueToY(row.importKw),
+      tooltipLeft,
+      tooltipTop,
       row,
     });
   };
@@ -390,7 +406,7 @@ export default function JuggleEnergyDashboardPrototype() {
   const handleChartMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const idx = hoverIndexFromClientX(e.clientX);
     if (idx === null) return;
-    updateHover(idx);
+    updateHover(idx, e.clientX, e.clientY);
   };
 
   const handleChartMouseLeave = () => {
@@ -471,32 +487,138 @@ export default function JuggleEnergyDashboardPrototype() {
 
         {!heroCollapsed ? (
           <section className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-            <div className="relative h-[320px] overflow-hidden">
+            <div className="relative h-[340px] overflow-hidden bg-slate-100">
               <img
                 src="/solar-dashboard.png"
                 alt="Solar dashboard hero"
                 className="h-full w-full object-cover"
               />
 
-              <div className="absolute left-6 top-6 rounded-2xl bg-white px-4 py-2 shadow">
-                <span className="font-semibold">☀ Irradiance 722 W/m²</span>
+              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(15,23,42,0.05))]" />
+
+              <div className="absolute left-6 top-6 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  Irradiance
+                </div>
+                <div className="mt-1 text-xl font-semibold text-slate-900">722 W/m²</div>
               </div>
 
-              <div className="absolute left-[140px] top-[80px] rounded-2xl bg-white px-4 py-2 shadow">
-                <span className="text-xl font-medium">104.2 kW</span>
+              <div className="absolute left-[132px] top-[88px] rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-700">
+                  Solar
+                </div>
+                <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
+                  104.2
+                  <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
+                </div>
               </div>
 
-              <div className="absolute top-10 left-1/2 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 shadow">
-                <span className="text-xl font-medium">156 kW</span>
+              <div className="absolute left-1/2 top-9 -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                  Building load
+                </div>
+                <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
+                  156
+                  <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
+                </div>
               </div>
 
-              <div className="absolute top-16 right-24 rounded-2xl bg-white px-4 py-2 shadow">
-                <span className="text-xl font-medium">92.0 kW</span>
+              <div className="absolute right-24 top-16 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                  Grid
+                </div>
+                <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
+                  92.0
+                  <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
+                </div>
               </div>
 
-              <div className="absolute bottom-6 right-10 rounded-2xl bg-white px-4 py-2 shadow text-emerald-700">
-                <span className="text-xl font-medium">94%</span>
+              <div className="absolute bottom-6 right-8 rounded-2xl border border-emerald-200/70 bg-white/82 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                  Battery
+                </div>
+                <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-emerald-700">
+                  94
+                  <span className="ml-1 text-sm font-medium text-emerald-600">%</span>
+                </div>
               </div>
+
+              <svg
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                viewBox="0 0 1200 340"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="solarFlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="rgba(132,204,22,0.0)" />
+                    <stop offset="45%" stopColor="rgba(132,204,22,0.7)" />
+                    <stop offset="100%" stopColor="rgba(132,204,22,0.0)" />
+                  </linearGradient>
+
+                  <linearGradient id="gridFlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="rgba(56,189,248,0.0)" />
+                    <stop offset="45%" stopColor="rgba(56,189,248,0.7)" />
+                    <stop offset="100%" stopColor="rgba(56,189,248,0.0)" />
+                  </linearGradient>
+
+                  <linearGradient id="batteryFlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="rgba(16,185,129,0.0)" />
+                    <stop offset="45%" stopColor="rgba(16,185,129,0.7)" />
+                    <stop offset="100%" stopColor="rgba(16,185,129,0.0)" />
+                  </linearGradient>
+                </defs>
+
+                <path
+                  d="M300 118 C 410 118, 470 118, 560 118"
+                  fill="none"
+                  stroke="rgba(132,204,22,0.18)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M300 118 C 410 118, 470 118, 560 118"
+                  fill="none"
+                  stroke="url(#solarFlow)"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  className="flow-solar"
+                  strokeDasharray="120 240"
+                />
+
+                <path
+                  d="M920 120 C 840 120, 770 120, 680 120"
+                  fill="none"
+                  stroke="rgba(56,189,248,0.16)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M920 120 C 840 120, 770 120, 680 120"
+                  fill="none"
+                  stroke="url(#gridFlow)"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  className="flow-grid"
+                  strokeDasharray="120 240"
+                />
+
+                <path
+                  d="M760 250 C 845 250, 915 250, 1015 250"
+                  fill="none"
+                  stroke="rgba(16,185,129,0.16)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M760 250 C 845 250, 915 250, 1015 250"
+                  fill="none"
+                  stroke="url(#batteryFlow)"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  className="flow-battery"
+                  strokeDasharray="120 240"
+                />
+              </svg>
             </div>
           </section>
         ) : (
@@ -637,22 +759,22 @@ export default function JuggleEnergyDashboardPrototype() {
               onMouseLeave={handleChartMouseLeave}
             >
               {loadingData ? (
-                <div className="flex h-64 items-center justify-center text-slate-500">
+                <div className="flex h-72 items-center justify-center text-slate-500">
                   Loading 15-minute data…
                 </div>
               ) : dataError ? (
-                <div className="flex h-64 items-center justify-center px-6 text-center text-red-600">
+                <div className="flex h-72 items-center justify-center px-6 text-center text-red-600">
                   {dataError}
                 </div>
               ) : filteredRows.length === 0 ? (
-                <div className="flex h-64 items-center justify-center text-slate-500">
+                <div className="flex h-72 items-center justify-center text-slate-500">
                   No data in selected date range.
                 </div>
               ) : (
                 <>
                   <svg
                     viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    className="h-64 w-full"
+                    className="h-72 w-full"
                     preserveAspectRatio="none"
                   >
                     {yTicks.map((tick, i) => {
@@ -698,7 +820,7 @@ export default function JuggleEnergyDashboardPrototype() {
                           />
                           <text
                             x={x}
-                            y={chartHeight - 10}
+                            y={chartHeight - 12}
                             textAnchor="middle"
                             fontSize="11"
                             fill="#64748b"
@@ -709,7 +831,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       );
                     })}
 
-                    <text x={padLeft - 8} y={padTop - 4} fontSize="11" fill="#64748b">
+                    <text x={padLeft - 14} y={padTop - 8} fontSize="12" fill="#64748b">
                       kW
                     </text>
 
@@ -763,10 +885,10 @@ export default function JuggleEnergyDashboardPrototype() {
 
                   {hovered && (
                     <div
-                      className="pointer-events-none absolute z-10 rounded-2xl bg-white px-4 py-3 text-sm shadow-lg ring-1 ring-slate-200"
+                      className="pointer-events-none absolute z-10 w-56 rounded-2xl bg-white px-4 py-3 text-sm shadow-lg ring-1 ring-slate-200"
                       style={{
-                        left: `min(calc(${(hovered.x / chartWidth) * 100}% + 18px), calc(100% - 240px))`,
-                        top: "14px",
+                        left: hovered.tooltipLeft,
+                        top: hovered.tooltipTop,
                       }}
                     >
                       <div className="font-semibold text-slate-900">
@@ -892,6 +1014,38 @@ export default function JuggleEnergyDashboardPrototype() {
           </div>
         </section>
       </main>
+
+      <style jsx global>{`
+        .flow-solar {
+          animation: flowRight 3.2s linear infinite;
+        }
+
+        .flow-grid {
+          animation: flowLeft 3.4s linear infinite;
+        }
+
+        .flow-battery {
+          animation: flowRight 2.8s linear infinite;
+        }
+
+        @keyframes flowRight {
+          from {
+            stroke-dashoffset: 360;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+
+        @keyframes flowLeft {
+          from {
+            stroke-dashoffset: 0;
+          }
+          to {
+            stroke-dashoffset: 360;
+          }
+        }
+      `}</style>
     </div>
   );
 }
