@@ -2,9 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function JuggleEnergyDashboardPrototype() {
   const pathname = usePathname();
+  const [heroCollapsed, setHeroCollapsed] = useState(false);
+  const [heroReady, setHeroReady] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("dashboard-hero-collapsed");
+    if (saved === "true") {
+      setHeroCollapsed(true);
+    }
+    setHeroReady(true);
+  }, []);
+
+  const toggleHero = () => {
+    const next = !heroCollapsed;
+    setHeroCollapsed(next);
+    window.localStorage.setItem("dashboard-hero-collapsed", String(next));
+  };
 
   const devices = [
     { name: "Inverter 1", type: "Inverter", status: "Online", read: "18.5 kW" },
@@ -93,35 +110,84 @@ export default function JuggleEnergyDashboardPrototype() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <section className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="relative h-[320px] overflow-hidden">
-            <img
-              src="/solar-dashboard.png"
-              alt="Solar dashboard hero"
-              className="h-full w-full object-cover"
-            />
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={toggleHero}
+            disabled={!heroReady}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            {heroCollapsed ? "Expand image" : "Collapse image"}
+          </button>
+        </div>
 
-            <div className="absolute left-6 top-6 rounded-2xl bg-white px-4 py-2 shadow">
-              <span className="font-semibold">☀ Irradiance 722 W/m²</span>
+        {!heroCollapsed ? (
+          <section className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
+            <div className="relative h-[320px] overflow-hidden">
+              <img
+                src="/solar-dashboard.png"
+                alt="Solar dashboard hero"
+                className="h-full w-full object-cover"
+              />
+
+              <div className="absolute left-6 top-6 rounded-2xl bg-white px-4 py-2 shadow">
+                <span className="font-semibold">☀ Irradiance 722 W/m²</span>
+              </div>
+
+              <div className="absolute left-[140px] top-[80px] rounded-2xl bg-white px-4 py-2 shadow">
+                <span className="text-xl font-medium">104.2 kW</span>
+              </div>
+
+              <div className="absolute top-10 left-1/2 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 shadow">
+                <span className="text-xl font-medium">156 kW</span>
+              </div>
+
+              <div className="absolute top-16 right-24 rounded-2xl bg-white px-4 py-2 shadow">
+                <span className="text-xl font-medium">92.0 kW</span>
+              </div>
+
+              <div className="absolute bottom-6 right-10 rounded-2xl bg-white px-4 py-2 shadow text-emerald-700">
+                <span className="text-xl font-medium">94%</span>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-[2rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Live Site Summary</h2>
+                <p className="text-sm text-slate-500">
+                  Hero image collapsed. Preference saved on this browser.
+                </p>
+              </div>
+              <div className="rounded-full bg-slate-50 px-3 py-1 text-sm text-slate-600 ring-1 ring-slate-200">
+                Compact mode
+              </div>
             </div>
 
-            <div className="absolute left-[140px] top-[80px] rounded-2xl bg-white px-4 py-2 shadow">
-              <span className="text-xl font-medium">104.2 kW</span>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                <div className="text-sm text-slate-500">Irradiance</div>
+                <div className="mt-1 text-xl font-semibold">722 W/m²</div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                <div className="text-sm text-slate-500">Solar</div>
+                <div className="mt-1 text-xl font-semibold">104.2 kW</div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                <div className="text-sm text-slate-500">Building</div>
+                <div className="mt-1 text-xl font-semibold">156 kW</div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                <div className="text-sm text-slate-500">Grid</div>
+                <div className="mt-1 text-xl font-semibold">92.0 kW</div>
+              </div>
+              <div className="rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-200">
+                <div className="text-sm text-emerald-700">Battery</div>
+                <div className="mt-1 text-xl font-semibold text-emerald-700">94%</div>
+              </div>
             </div>
-
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 shadow">
-              <span className="text-xl font-medium">156 kW</span>
-            </div>
-
-            <div className="absolute top-16 right-24 rounded-2xl bg-white px-4 py-2 shadow">
-              <span className="text-xl font-medium">92.0 kW</span>
-            </div>
-
-            <div className="absolute bottom-6 right-10 rounded-2xl bg-white px-4 py-2 shadow text-emerald-700">
-              <span className="text-xl font-medium">94%</span>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           {[
