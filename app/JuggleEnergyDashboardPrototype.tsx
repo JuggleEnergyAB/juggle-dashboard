@@ -224,12 +224,19 @@ export default function JuggleEnergyDashboardPrototype() {
     window.localStorage.setItem("dashboard-hero-collapsed", String(next));
   };
 
-  const setPresetRange = (preset: "7D" | "30D" | "MTD" | "YTD") => {
+  const setPresetRange = (preset: "Today" | "Yesterday" | "7D" | "30D" | "MTD" | "YTD") => {
     if (!dataMaxDate || !dataMinDate) return;
 
     setRangeLabel(preset);
 
-    if (preset === "7D") {
+    if (preset === "Today") {
+      setDateFrom(dataMaxDate);
+      setDateTo(dataMaxDate);
+    } else if (preset === "Yesterday") {
+      const yesterday = clampDate(shiftDate(dataMaxDate, -1), dataMinDate, dataMaxDate);
+      setDateFrom(yesterday);
+      setDateTo(yesterday);
+    } else if (preset === "7D") {
       setDateFrom(clampDate(shiftDate(dataMaxDate, -6), dataMinDate, dataMaxDate));
       setDateTo(dataMaxDate);
     } else if (preset === "30D") {
@@ -290,33 +297,48 @@ export default function JuggleEnergyDashboardPrototype() {
   ];
 
   const chartWidth = 860;
-  const chartHeight = 260;
-  const padLeft = 58;
+  const chartHeight = 280;
+  const padLeft = 62;
   const padRight = 18;
   const padTop = 18;
-  const padBottom = 34;
+  const padBottom = 46;
   const plotWidth = chartWidth - padLeft - padRight;
   const plotHeight = chartHeight - padTop - padBottom;
 
-  const maxYRaw = Math.max(1, ...filteredRows.flatMap((r) => [r.generationKw, r.importKw]));
-  const maxY = Math.ceil(maxYRaw / 10) * 10;
+  const maxPositiveRaw = Math.max(
+    1,
+    ...filteredRows.flatMap((r) => [r.generationKw, Math.max(r.importKw, 0)]),
+  );
+  const maxPositive = Math.ceil(maxPositiveRaw / 10) * 10;
+
+  const minNegativeRaw = Math.min(0, ...filteredRows.map((r) => Math.min(r.importKw, 0)));
+  const minNegative = minNegativeRaw < 0 ? Math.floor(minNegativeRaw / 10) * 10 : 0;
+
+  const domainTop = maxPositive;
+  const domainBottom = minNegative;
+  const domainSpan = domainTop - domainBottom || 1;
+
+  const valueToY = (value: number) =>
+    padTop + plotHeight - ((value - domainBottom) / domainSpan) * plotHeight;
+
+  const zeroY = valueToY(0);
 
   const generationPoints = filteredRows.map((r, idx) => ({
     x:
       padLeft +
       (filteredRows.length <= 1 ? plotWidth / 2 : (idx / (filteredRows.length - 1)) * plotWidth),
-    y: padTop + plotHeight - (r.generationKw / maxY) * plotHeight,
+    y: valueToY(r.generationKw),
   }));
 
   const importPoints = filteredRows.map((r, idx) => ({
     x:
       padLeft +
       (filteredRows.length <= 1 ? plotWidth / 2 : (idx / (filteredRows.length - 1)) * plotWidth),
-    y: padTop + plotHeight - (r.importKw / maxY) * plotHeight,
+    y: valueToY(r.importKw),
   }));
 
   const generationLine = buildLinePath(generationPoints);
-  const generationArea = buildAreaPath(generationPoints, padTop + plotHeight);
+  const generationArea = buildAreaPath(generationPoints, zeroY);
   const importLine = buildLinePath(importPoints);
 
   const xTickIndices = useMemo(() => {
@@ -330,7 +352,13 @@ export default function JuggleEnergyDashboardPrototype() {
     return Array.from(new Set(idxs));
   }, [filteredRows.length]);
 
-  const yTicks = [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY];
+  const yTicks = useMemo(() => {
+    const ticks = [domainBottom];
+    if (domainBottom < 0) ticks.push(domainBottom / 2);
+    ticks.push(0);
+    if (domainTop > 0) ticks.push(domainTop / 2, domainTop);
+    return Array.from(new Set(ticks)).sort((a, b) => a - b);
+  }, [domainBottom, domainTop]);
 
   const hoverIndexFromClientX = (clientX: number) => {
     if (!chartWrapRef.current || filteredRows.length === 0) return null;
@@ -349,14 +377,12 @@ export default function JuggleEnergyDashboardPrototype() {
     const x =
       padLeft +
       (filteredRows.length <= 1 ? plotWidth / 2 : (index / (filteredRows.length - 1)) * plotWidth);
-    const yGeneration = padTop + plotHeight - (row.generationKw / maxY) * plotHeight;
-    const yImport = padTop + plotHeight - (row.importKw / maxY) * plotHeight;
 
     setHovered({
       index,
       x,
-      yGeneration,
-      yImport,
+      yGeneration: valueToY(row.generationKw),
+      yImport: valueToY(row.importKw),
       row,
     });
   };
@@ -541,10 +567,14 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap gap-2">
-                  {["7D", "30D", "MTD", "YTD"].map((preset) => (
+                  {["Today", "Yesterday", "7D", "30D", "MTD", "YTD"].map((preset) => (
                     <button
                       key={preset}
-                      onClick={() => setPresetRange(preset as "7D" | "30D" | "MTD" | "YTD")}
+                      onClick={() =>
+                        setPresetRange(
+                          preset as "Today" | "Yesterday" | "7D" | "30D" | "MTD" | "YTD",
+                        )
+                      }
                       className={`rounded-xl px-3 py-2 text-sm font-medium ring-1 transition ${
                         rangeLabel === preset
                           ? "bg-slate-900 text-white ring-slate-900"
@@ -596,7 +626,7 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
               <div className="flex items-center gap-2 text-slate-600">
                 <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
-                Import kW
+                Import / Export kW
               </div>
             </div>
 
@@ -626,7 +656,7 @@ export default function JuggleEnergyDashboardPrototype() {
                     preserveAspectRatio="none"
                   >
                     {yTicks.map((tick, i) => {
-                      const y = padTop + plotHeight - (tick / maxY) * plotHeight;
+                      const y = valueToY(tick);
                       return (
                         <g key={i}>
                           <line
@@ -634,8 +664,8 @@ export default function JuggleEnergyDashboardPrototype() {
                             y1={y}
                             x2={chartWidth - padRight}
                             y2={y}
-                            stroke="rgba(148,163,184,0.18)"
-                            strokeWidth="1"
+                            stroke={tick === 0 ? "rgba(71,85,105,0.35)" : "rgba(148,163,184,0.18)"}
+                            strokeWidth={tick === 0 ? "1.5" : "1"}
                           />
                           <text
                             x={padLeft - 10}
@@ -668,7 +698,7 @@ export default function JuggleEnergyDashboardPrototype() {
                           />
                           <text
                             x={x}
-                            y={chartHeight - 8}
+                            y={chartHeight - 10}
                             textAnchor="middle"
                             fontSize="11"
                             fill="#64748b"
@@ -679,7 +709,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       );
                     })}
 
-                    <text x={padLeft - 6} y={padTop - 4} fontSize="11" fill="#64748b">
+                    <text x={padLeft - 8} y={padTop - 4} fontSize="11" fill="#64748b">
                       kW
                     </text>
 
@@ -735,7 +765,7 @@ export default function JuggleEnergyDashboardPrototype() {
                     <div
                       className="pointer-events-none absolute z-10 rounded-2xl bg-white px-4 py-3 text-sm shadow-lg ring-1 ring-slate-200"
                       style={{
-                        left: `min(calc(${(hovered.x / chartWidth) * 100}% + 18px), calc(100% - 230px))`,
+                        left: `min(calc(${(hovered.x / chartWidth) * 100}% + 18px), calc(100% - 240px))`,
                         top: "14px",
                       }}
                     >
@@ -751,7 +781,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-slate-700">
                         <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
-                        Import:{" "}
+                        Import / Export:{" "}
                         <span className="font-semibold">
                           {formatNumber(hovered.row.importKw, 2)} kW
                         </span>
