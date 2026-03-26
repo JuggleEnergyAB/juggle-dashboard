@@ -1,4 +1,11 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 export default function JuggleEnergyDashboardPrototype() {
+  const pathname = usePathname();
+
   const devices = [
     { name: "Inverter 1", type: "Inverter", status: "Online", read: "18.5 kW" },
     { name: "Inverter 2", type: "Inverter", status: "Online", read: "18.8 kW" },
@@ -9,19 +16,19 @@ export default function JuggleEnergyDashboardPrototype() {
   ];
 
   const navItems = [
-    "Dashboard",
-    "Energy & CO₂",
-    "Carbon",
-    "Plot & Report",
-    "Daily Energy",
-    "Monthly Energy",
-    "Yearly Comparison",
-    "Alarms",
-    "Meters",
-    "Inverters",
-    "Signals",
-    "Staff",
-    "Billing",
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Energy & CO₂", href: "#" },
+    { name: "Carbon", href: "#" },
+    { name: "Plot & Report", href: "#" },
+    { name: "Daily Energy", href: "#" },
+    { name: "Monthly Energy", href: "#" },
+    { name: "Yearly Comparison", href: "#" },
+    { name: "Alarms", href: "/alarms" },
+    { name: "Meters", href: "#" },
+    { name: "Inverters", href: "/inverters" },
+    { name: "Signals", href: "#" },
+    { name: "Staff", href: "#" },
+    { name: "Billing", href: "#" },
   ];
 
   return (
@@ -36,55 +43,50 @@ export default function JuggleEnergyDashboardPrototype() {
                 <span className="absolute bottom-0 left-2 h-4 w-4 rounded-full border-2 border-lime-500" />
               </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-light tracking-tight">
-                Juggle <span className="font-medium">Energy</span>
-              </h1>
-            </div>
+            <h1 className="text-3xl font-light tracking-tight">
+              Juggle <span className="font-medium">Energy</span>
+            </h1>
           </div>
 
-          <button className="rounded-full border border-fuchsia-300 px-4 py-2 text-sm font-medium text-fuchsia-700 transition hover:bg-fuchsia-50">
+          <button className="rounded-full border border-fuchsia-300 px-4 py-2 text-sm font-medium text-fuchsia-700 hover:bg-fuchsia-50">
             Share
           </button>
         </div>
 
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 pb-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 pb-4">
           <div>
-            <div className="text-3xl font-semibold tracking-tight">
-              Smithy&apos;s Mushrooms PH1
-            </div>
-            <div className="text-lg font-medium text-slate-700">
-              Solar PV Installation AMP:00028
-            </div>
+            <div className="text-3xl font-semibold">Smithy&apos;s Mushrooms PH1</div>
+            <div className="text-lg text-slate-600">Solar PV Installation AMP:00028</div>
           </div>
-          <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+          <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
             Live mock view
           </div>
         </div>
 
         <nav className="mx-auto flex max-w-7xl flex-wrap gap-2 px-6 pb-4 text-sm text-slate-500">
-          {navItems.map((item, index) => {
-            const isActive = index === 0;
-            const isAlarmTab = item === "Alarms";
+          {navItems.map((item) => {
+            const isAlarmTab = item.name === "Alarms";
+            const isActive =
+              item.href !== "#" &&
+              (pathname === item.href || pathname.startsWith(item.href + "/"));
 
             return (
-              <button
-                key={item}
-                className={`relative rounded-xl px-3 py-2 transition ${
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`relative inline-flex items-center gap-2 rounded-xl px-3 py-2 transition ${
                   isActive
                     ? "border border-slate-300 bg-white text-slate-900 shadow-sm"
                     : "hover:bg-slate-100"
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  {item}
-                  {isAlarmTab && (
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-100 px-1.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-200">
-                      3
-                    </span>
-                  )}
-                </span>
-              </button>
+                {item.name}
+                {isAlarmTab && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-100 px-1.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-200">
+                    3
+                  </span>
+                )}
+              </Link>
             );
           })}
         </nav>
@@ -92,33 +94,31 @@ export default function JuggleEnergyDashboardPrototype() {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <section className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="relative h-[320px] overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100">
+          <div className="relative h-[320px] overflow-hidden">
             <img
               src="/solar-dashboard.png"
               alt="Solar dashboard hero"
               className="h-full w-full object-cover"
             />
 
-            <div className="absolute inset-0 bg-gradient-to-r from-white/15 via-transparent to-transparent pointer-events-none" />
-
-            <div className="absolute left-6 top-6 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
-              <span className="font-semibold text-slate-800">☀ Irradiance 722 W/m²</span>
+            <div className="absolute left-6 top-6 rounded-2xl bg-white px-4 py-2 shadow">
+              <span className="font-semibold">☀ Irradiance 722 W/m²</span>
             </div>
 
-            <div className="absolute left-[140px] top-[78px] rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
-              <div className="font-semibold text-slate-900">104.2 kW</div>
+            <div className="absolute left-[140px] top-[80px] rounded-2xl bg-white px-4 py-2 shadow">
+              <span className="text-2xl font-semibold">104.2 kW</span>
             </div>
 
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
-              <div className="font-semibold text-slate-900">156 kW</div>
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 shadow">
+              <span className="text-2xl font-semibold">156 kW</span>
             </div>
 
-            <div className="absolute top-16 right-24 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
-              <div className="font-semibold text-slate-900">92.0 kW</div>
+            <div className="absolute top-16 right-24 rounded-2xl bg-white px-4 py-2 shadow">
+              <span className="text-2xl font-semibold">92.0 kW</span>
             </div>
 
-            <div className="absolute bottom-6 right-10 rounded-2xl bg-white/95 px-4 py-2 shadow-md backdrop-blur ring-1 ring-slate-200">
-              <div className="font-semibold text-emerald-700">94%</div>
+            <div className="absolute bottom-6 right-10 rounded-2xl bg-white px-4 py-2 shadow text-emerald-700">
+              <span className="text-2xl font-semibold">94%</span>
             </div>
           </div>
         </section>
