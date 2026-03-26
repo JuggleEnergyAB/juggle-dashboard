@@ -533,7 +533,7 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(15,23,42,0.05))]" />
 
-              <div className="absolute left-6 top-5.5 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+              <div className="absolute left-6 top-15 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                 </div>
                 <div className="mt-1 text-xl font-semibold text-slate-900">722 W/m²</div>
@@ -548,7 +548,7 @@ export default function JuggleEnergyDashboardPrototype() {
                 </div>
               </div>
 
-              <div className="absolute left-1/2 top-4.5 -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+              <div className="absolute left-1/2 top-9.5 -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                 </div>
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
