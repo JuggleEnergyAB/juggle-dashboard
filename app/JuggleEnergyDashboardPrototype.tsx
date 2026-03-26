@@ -106,19 +106,19 @@ export default function JuggleEnergyDashboardPrototype() {
             </div>
 
             <div className="absolute left-[140px] top-[80px] rounded-2xl bg-white px-4 py-2 shadow">
-              <span className="text-2xl font-semibold">104.2 kW</span>
+              <span className="text-xl font-medium">104.2 kW</span>
             </div>
 
             <div className="absolute top-10 left-1/2 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 shadow">
-              <span className="text-2xl font-semibold">156 kW</span>
+              <span className="text-xl font-medium">156 kW</span>
             </div>
 
             <div className="absolute top-16 right-24 rounded-2xl bg-white px-4 py-2 shadow">
-              <span className="text-2xl font-semibold">92.0 kW</span>
+              <span className="text-xl font-medium">92.0 kW</span>
             </div>
 
             <div className="absolute bottom-6 right-10 rounded-2xl bg-white px-4 py-2 shadow text-emerald-700">
-              <span className="text-2xl font-semibold">94%</span>
+              <span className="text-xl font-medium">94%</span>
             </div>
           </div>
         </section>
