@@ -9,6 +9,7 @@ type Device = {
   type: "Inverter" | "Meter" | "Battery";
   status: "Online" | "Offline";
   read: string;
+  image: string;
 };
 
 type CsvRow = {
@@ -274,12 +275,48 @@ export default function JuggleEnergyDashboardPrototype() {
     rangeLabel === "Custom" ? `${daysBetweenInclusive(dateFrom, dateTo)} days` : rangeLabel;
 
   const devices: Device[] = [
-    { name: "Inverter 1", type: "Inverter", status: "Online", read: "18.5 kW" },
-    { name: "Inverter 2", type: "Inverter", status: "Online", read: "18.8 kW" },
-    { name: "Meter 1", type: "Meter", status: "Online", read: "156.0 kW" },
-    { name: "Inverter 3", type: "Inverter", status: "Offline", read: "0.0 kW" },
-    { name: "Meter 2", type: "Meter", status: "Online", read: "92.0 kW" },
-    { name: "Battery PCS", type: "Battery", status: "Online", read: "18.3 kW" },
+    {
+      name: "Inverter 1",
+      type: "Inverter",
+      status: "Online",
+      read: "18.5 kW",
+      image: "/device-inverter.png",
+    },
+    {
+      name: "Inverter 2",
+      type: "Inverter",
+      status: "Online",
+      read: "18.8 kW",
+      image: "/device-inverter.png",
+    },
+    {
+      name: "Meter 1",
+      type: "Meter",
+      status: "Online",
+      read: "156.0 kW",
+      image: "/device-meter.png",
+    },
+    {
+      name: "Inverter 3",
+      type: "Inverter",
+      status: "Offline",
+      read: "0.0 kW",
+      image: "/device-inverter.png",
+    },
+    {
+      name: "Meter 2",
+      type: "Meter",
+      status: "Online",
+      read: "92.0 kW",
+      image: "/device-meter.png",
+    },
+    {
+      name: "Battery PCS",
+      type: "Battery",
+      status: "Online",
+      read: "18.3 kW",
+      image: "/device-battery.png",
+    },
   ];
 
   const navItems = [
@@ -504,7 +541,7 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
 
               <div className="absolute left-[132px] top-[88px] rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-700">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                   Solar
                 </div>
                 <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
@@ -514,7 +551,7 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
 
               <div className="absolute left-1/2 top-9 -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                   Building load
                 </div>
                 <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
@@ -524,7 +561,7 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
 
               <div className="absolute right-24 top-16 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                   Grid
                 </div>
                 <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
@@ -533,13 +570,13 @@ export default function JuggleEnergyDashboardPrototype() {
                 </div>
               </div>
 
-              <div className="absolute bottom-6 right-8 rounded-2xl border border-emerald-200/70 bg-white/82 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+              <div className="absolute bottom-6 right-8 rounded-2xl border border-white/60 bg-white/82 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                   Battery
                 </div>
-                <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-emerald-700">
+                <div className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-slate-900">
                   94
-                  <span className="ml-1 text-sm font-medium text-emerald-600">%</span>
+                  <span className="ml-1 text-sm font-medium text-slate-500">%</span>
                 </div>
               </div>
 
@@ -549,75 +586,40 @@ export default function JuggleEnergyDashboardPrototype() {
                 preserveAspectRatio="none"
               >
                 <defs>
-                  <linearGradient id="solarFlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="rgba(132,204,22,0.0)" />
-                    <stop offset="45%" stopColor="rgba(132,204,22,0.7)" />
-                    <stop offset="100%" stopColor="rgba(132,204,22,0.0)" />
-                  </linearGradient>
-
-                  <linearGradient id="gridFlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="rgba(56,189,248,0.0)" />
-                    <stop offset="45%" stopColor="rgba(56,189,248,0.7)" />
-                    <stop offset="100%" stopColor="rgba(56,189,248,0.0)" />
-                  </linearGradient>
-
-                  <linearGradient id="batteryFlow" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="rgba(16,185,129,0.0)" />
-                    <stop offset="45%" stopColor="rgba(16,185,129,0.7)" />
-                    <stop offset="100%" stopColor="rgba(16,185,129,0.0)" />
-                  </linearGradient>
+                  <filter id="sparkGlow" x="-100%" y="-100%" width="300%" height="300%">
+                    <feGaussianBlur stdDeviation="2.8" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
 
                 <path
-                  d="M300 118 C 410 118, 470 118, 560 118"
+                  d="M930 118 C 845 118, 770 118, 690 118"
                   fill="none"
-                  stroke="rgba(132,204,22,0.18)"
-                  strokeWidth="4"
+                  stroke="rgba(30,41,59,0.55)"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
-                />
-                <path
-                  d="M300 118 C 410 118, 470 118, 560 118"
-                  fill="none"
-                  stroke="url(#solarFlow)"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  className="flow-solar"
-                  strokeDasharray="120 240"
                 />
 
-                <path
-                  d="M920 120 C 840 120, 770 120, 680 120"
-                  fill="none"
-                  stroke="rgba(56,189,248,0.16)"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M920 120 C 840 120, 770 120, 680 120"
-                  fill="none"
-                  stroke="url(#gridFlow)"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  className="flow-grid"
-                  strokeDasharray="120 240"
-                />
-
-                <path
-                  d="M760 250 C 845 250, 915 250, 1015 250"
-                  fill="none"
-                  stroke="rgba(16,185,129,0.16)"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M760 250 C 845 250, 915 250, 1015 250"
-                  fill="none"
-                  stroke="url(#batteryFlow)"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  className="flow-battery"
-                  strokeDasharray="120 240"
-                />
+                <circle r="4.8" fill="rgba(250,204,21,0.98)" filter="url(#sparkGlow)">
+                  <animateMotion
+                    dur="2.4s"
+                    begin="0s;gridspark.end+8s"
+                    repeatCount="indefinite"
+                    rotate="auto"
+                    path="M930 118 C 845 118, 770 118, 690 118"
+                  />
+                  <animate
+                    id="gridspark"
+                    attributeName="opacity"
+                    values="0;1;1;0"
+                    dur="2.4s"
+                    begin="0s;gridspark.end+8s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
               </svg>
             </div>
           </section>
@@ -949,13 +951,14 @@ export default function JuggleEnergyDashboardPrototype() {
                   className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                      {device.type === "Meter"
-                        ? "M"
-                        : device.type === "Battery"
-                        ? "B"
-                        : "INV"}
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+                      <img
+                        src={device.image}
+                        alt={device.type}
+                        className="h-full w-full object-contain p-1"
+                      />
                     </div>
+
                     <div>
                       <div className="font-medium">{device.name}</div>
                       <div
@@ -967,6 +970,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       </div>
                     </div>
                   </div>
+
                   <div className="text-right">
                     <div className="font-semibold">{device.read}</div>
                     <div className="text-sm text-slate-500">Instant read</div>
@@ -1016,33 +1020,10 @@ export default function JuggleEnergyDashboardPrototype() {
       </main>
 
       <style jsx global>{`
-        .flow-solar {
-          animation: flowRight 3.2s linear infinite;
-        }
-
-        .flow-grid {
-          animation: flowLeft 3.4s linear infinite;
-        }
-
-        .flow-battery {
-          animation: flowRight 2.8s linear infinite;
-        }
-
-        @keyframes flowRight {
-          from {
-            stroke-dashoffset: 360;
-          }
-          to {
-            stroke-dashoffset: 0;
-          }
-        }
-
-        @keyframes flowLeft {
-          from {
-            stroke-dashoffset: 0;
-          }
-          to {
-            stroke-dashoffset: 360;
+        @media (prefers-reduced-motion: reduce) {
+          svg animateMotion,
+          svg animate {
+            display: none;
           }
         }
       `}</style>
