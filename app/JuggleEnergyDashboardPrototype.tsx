@@ -109,6 +109,8 @@ export default function JuggleEnergyDashboardPrototype() {
     importKwhToday?: number | null;
   } | null>(null);
 
+  const [todayImportKwh, setTodayImportKwh] = useState<number | null>(null);
+
   const [chartRows, setChartRows] = useState<ApiChartRow[]>([]);
   const [loadingChart, setLoadingChart] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
@@ -165,6 +167,51 @@ export default function JuggleEnergyDashboardPrototype() {
 
     loadLiveMeter();
     const interval = setInterval(loadLiveMeter, 300000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTodayImportKwh() {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+
+        const res = await fetch(
+          `/api/juggle/current-meter?from=${today}&to=${today}`,
+          { cache: "no-store" },
+        );
+
+        if (!res.ok) throw new Error("Failed to load today's import energy");
+
+        const json = await res.json();
+        const rows = (json.chartReadings ?? []) as ApiChartRow[];
+
+        let value = 0;
+
+        if (rows.length > 0) {
+          const first = rows[0]?.importEnergyKwh ?? 0;
+          const last = rows[rows.length - 1]?.importEnergyKwh ?? 0;
+          value = Math.max(0, last - first);
+        }
+
+        if (!cancelled) {
+          setTodayImportKwh(value);
+        }
+      } catch (err) {
+        console.error("Today's import energy error:", err);
+        if (!cancelled) {
+          setTodayImportKwh(null);
+        }
+      }
+    }
+
+    loadTodayImportKwh();
+    const interval = setInterval(loadTodayImportKwh, 300000);
 
     return () => {
       cancelled = true;
@@ -261,18 +308,9 @@ export default function JuggleEnergyDashboardPrototype() {
   }, [chartRows]);
 
   const currentGridKw = liveMeter?.powerKw ?? latestChartRow?.importKw ?? 0;
-  const currentImportEnergyKwh =
-    liveMeter?.generationKwh ?? latestChartRow?.importEnergyKwh ?? 0;
   const currentExportKw = liveMeter?.exportKw ?? latestChartRow?.exportKw ?? 0;
 
-  const importKwhToday = useMemo(() => {
-    if (liveMeter?.importKwhToday != null) return liveMeter.importKwhToday;
-    if (!chartRows.length) return 0;
-
-    const first = chartRows[0]?.importEnergyKwh ?? 0;
-    const last = chartRows[chartRows.length - 1]?.importEnergyKwh ?? 0;
-    return Math.max(0, last - first);
-  }, [liveMeter, chartRows]);
+  const importKwhToday = liveMeter?.importKwhToday ?? todayImportKwh;
 
   const currentSolarKw = 0;
   const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExportKw);
@@ -560,14 +598,14 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute left-[170px] top-[20px] rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
-                  {formatNumber(currentSolarKw, 1)}
+                  {formatNumber(currentSolarKw, 3)}
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
                 </div>
               </div>
 
               <div className="absolute left-1/2 top-[38px] -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
-                  {liveMeter?.powerKw != null ? formatNumber(currentLoadKw, 1) : "—"}
+                  {liveMeter?.powerKw != null ? formatNumber(currentLoadKw, 3) : "—"}
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
                 </div>
               </div>
@@ -649,12 +687,12 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
                 <div className="text-sm text-slate-500">Solar</div>
-                <div className="mt-1 text-xl font-semibold">{formatNumber(currentSolarKw, 1)} kW</div>
+                <div className="mt-1 text-xl font-semibold">{formatNumber(currentSolarKw, 3)} kW</div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
                 <div className="text-sm text-slate-500">Building</div>
                 <div className="mt-1 text-xl font-semibold">
-                  {liveMeter?.powerKw != null ? `${formatNumber(currentLoadKw, 1)} kW` : "—"}
+                  {liveMeter?.powerKw != null ? `${formatNumber(currentLoadKw, 3)} kW` : "—"}
                 </div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
@@ -675,24 +713,24 @@ export default function JuggleEnergyDashboardPrototype() {
           {[
             {
               title: "Solar Generation",
-              now: `${formatNumber(currentSolarKw, 1)} kW`,
+              now: `${formatNumber(currentSolarKw, 3)} kW`,
               sub: "Not yet connected",
               accent: "bg-lime-600",
               text: "text-lime-700",
             },
-         {
-  title: "Grid Import",
-  now:
-    liveMeter?.powerKw != null
-      ? `${formatNumber(liveMeter.powerKw, 3)} kW`
-      : "—",
-  sub:
-    liveMeter?.powerKw != null
-      ? `${formatNumber(importKwhToday, 2)} kWh today`
-      : "Live import power",
-  accent: "bg-amber-500",
-  text: "text-amber-600",
-},
+            {
+              title: "Grid Import",
+              now:
+                liveMeter?.powerKw != null
+                  ? `${formatNumber(liveMeter.powerKw, 3)} kW`
+                  : "—",
+              sub:
+                importKwhToday != null
+                  ? `${formatNumber(importKwhToday, 3)} kWh today`
+                  : "Live import power",
+              accent: "bg-amber-500",
+              text: "text-amber-600",
+            },
             {
               title: "Grid Export",
               now:
@@ -707,7 +745,7 @@ export default function JuggleEnergyDashboardPrototype() {
               title: "Consumption",
               now:
                 liveMeter?.powerKw != null
-                  ? `${formatNumber(currentLoadKw, 1)} kW`
+                  ? `${formatNumber(currentLoadKw, 3)} kW`
                   : "—",
               sub: "Grid + solar - export",
               accent: "bg-purple-500",
@@ -746,7 +784,7 @@ export default function JuggleEnergyDashboardPrototype() {
           <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold">Weekly Energy</h2>
+                <h2 className="text-2xl font-semibold">Energy Overview</h2>
                 <div className="mt-1 text-sm text-slate-500">
                   Real API meter data with dual-axis overlay and series toggles
                 </div>
@@ -1056,11 +1094,13 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <div className="text-sm text-slate-500">Average Import kW</div>
-                <div className="text-xl font-semibold">{formatNumber(averageImportKw, 2)} kW</div>
+                <div className="text-xl font-semibold">{formatNumber(averageImportKw, 3)} kW</div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <div className="text-sm text-slate-500">Grid Import Today</div>
-                <div className="text-xl font-semibold">{formatNumber(importKwhToday, 2)} kWh</div>
+                <div className="text-xl font-semibold">
+                  {importKwhToday != null ? `${formatNumber(importKwhToday, 3)} kWh` : "—"}
+                </div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <div className="text-sm text-slate-500">Selected Period</div>
