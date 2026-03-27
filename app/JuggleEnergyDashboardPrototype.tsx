@@ -474,8 +474,8 @@ export default function JuggleEnergyDashboardPrototype() {
 
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 pb-4">
           <div>
-            <div className="text-3xl font-semibold">Smithy&apos;s Mushrooms PH1</div>
-            <div className="text-lg text-slate-600">Solar PV Installation AMP:00028</div>
+            <div className="text-3xl font-semibold">Juggle&apos;s Office</div>
+            <div className="text-lg text-slate-600">Solar PV Installation MDC:00005</div>
           </div>
           <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
             Live mock view
