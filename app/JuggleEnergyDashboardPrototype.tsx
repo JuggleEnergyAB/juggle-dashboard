@@ -4,12 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+type ChartMetric = "solar" | "import" | "export" | "consumption" | "battery";
+
 type Device = {
   name: string;
   type: "Inverter" | "Meter" | "Battery" | "Weather";
   status: "Online" | "Offline";
   read: string;
   image: string;
+  clickable?: boolean;
+  metric?: ChartMetric;
 };
 
 type ApiChartRow = {
@@ -27,8 +31,6 @@ type HoverPoint = {
   tooltipTop: number;
   row: ApiChartRow;
 };
-
-type ChartMetric = "solar" | "import" | "export" | "consumption" | "battery";
 
 function shiftDate(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
@@ -95,9 +97,27 @@ function formatAxisDate(ts: string): string {
   });
 }
 
+function getMetricRing(metric?: ChartMetric): string {
+  switch (metric) {
+    case "solar":
+      return "border-lime-300 ring-lime-300";
+    case "import":
+      return "border-amber-300 ring-amber-300";
+    case "export":
+      return "border-blue-300 ring-blue-300";
+    case "consumption":
+      return "border-purple-300 ring-purple-300";
+    case "battery":
+      return "border-slate-300 ring-slate-300";
+    default:
+      return "border-slate-300 ring-slate-300";
+  }
+}
+
 export default function JuggleEnergyDashboardPrototype() {
   const pathname = usePathname();
   const chartWrapRef = useRef<HTMLDivElement | null>(null);
+  const chartSvgRef = useRef<SVGSVGElement | null>(null);
 
   const [heroCollapsed, setHeroCollapsed] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
@@ -127,6 +147,8 @@ export default function JuggleEnergyDashboardPrototype() {
   const [showImportKw, setShowImportKw] = useState(true);
   const [showImportKwh, setShowImportKwh] = useState(false);
   const [activeMetric, setActiveMetric] = useState<ChartMetric>("import");
+  const [selectedKpiMetric, setSelectedKpiMetric] = useState<ChartMetric>("import");
+  const [activeDeviceName, setActiveDeviceName] = useState<string | null>(null);
 
   const [hovered, setHovered] = useState<HoverPoint | null>(null);
 
@@ -352,6 +374,16 @@ export default function JuggleEnergyDashboardPrototype() {
   const primarySeriesLabel = activeMetric === "solar" ? "Solar kW" : "Import kW";
   const secondarySeriesLabel = activeMetric === "solar" ? "Solar kWh" : "Import kWh";
 
+  const handleMetricSelection = (metric: ChartMetric) => {
+    setSelectedKpiMetric(metric);
+    setActiveMetric(metric);
+    setActiveDeviceName(null);
+
+    if (metric === "import" || metric === "solar") {
+      setShowImportKw(true);
+    }
+  };
+
   const devices: Device[] = [
     {
       name: "Weather Station",
@@ -359,6 +391,8 @@ export default function JuggleEnergyDashboardPrototype() {
       status: "Online",
       read: "22°C • 720 W/m²",
       image: "/device-weather.png",
+      clickable: true,
+      metric: "solar",
     },
     {
       name: "Inverter 1",
@@ -366,6 +400,8 @@ export default function JuggleEnergyDashboardPrototype() {
       status: "Online",
       read: "18.5 kW",
       image: "/device-inverter.png",
+      clickable: true,
+      metric: "solar",
     },
     {
       name: "Inverter 2",
@@ -373,14 +409,17 @@ export default function JuggleEnergyDashboardPrototype() {
       status: "Online",
       read: "18.8 kW",
       image: "/device-inverter.png",
+      clickable: true,
+      metric: "solar",
     },
     {
       name: "Grid Import Meter",
       type: "Meter",
       status: "Online",
-      read:
-        liveMeter?.powerKw != null ? `${formatNumber(liveMeter.powerKw, 3)} kW` : "—",
+      read: liveMeter?.powerKw != null ? `${formatNumber(liveMeter.powerKw, 3)} kW` : "—",
       image: "/device-meter.png",
+      clickable: true,
+      metric: "import",
     },
     {
       name: "Inverter 3",
@@ -388,6 +427,7 @@ export default function JuggleEnergyDashboardPrototype() {
       status: "Offline",
       read: "0.0 kW",
       image: "/device-inverter.png",
+      clickable: false,
     },
     {
       name: "Meter 2",
@@ -395,6 +435,7 @@ export default function JuggleEnergyDashboardPrototype() {
       status: "Online",
       read: "92.0 kW",
       image: "/device-meter.png",
+      clickable: false,
     },
     {
       name: "Battery PCS",
@@ -402,6 +443,7 @@ export default function JuggleEnergyDashboardPrototype() {
       status: "Online",
       read: "18.3 kW",
       image: "/device-battery.png",
+      clickable: false,
     },
   ];
 
@@ -433,14 +475,12 @@ export default function JuggleEnergyDashboardPrototype() {
       accent: "bg-lime-600",
       text: "text-lime-700",
       activeRing: "ring-lime-300",
-      activeBg: "bg-lime-50",
       clickable: true,
     },
     {
       id: "import" as const,
       title: "Grid Import",
-      now:
-        liveMeter?.powerKw != null ? `${formatNumber(liveMeter.powerKw, 3)} kW` : "—",
+      now: liveMeter?.powerKw != null ? `${formatNumber(liveMeter.powerKw, 3)} kW` : "—",
       sub:
         importKwhToday != null
           ? `${formatNumber(importKwhToday, 3)} kWh today`
@@ -448,31 +488,26 @@ export default function JuggleEnergyDashboardPrototype() {
       accent: "bg-amber-500",
       text: "text-amber-600",
       activeRing: "ring-amber-300",
-      activeBg: "bg-amber-50",
       clickable: true,
     },
     {
       id: "export" as const,
       title: "Grid Export",
-      now:
-        liveMeter?.exportKw != null ? `${formatNumber(liveMeter.exportKw, 3)} kW` : "—",
+      now: liveMeter?.exportKw != null ? `${formatNumber(liveMeter.exportKw, 3)} kW` : "—",
       sub: "Live export power",
       accent: "bg-blue-500",
       text: "text-blue-600",
       activeRing: "ring-blue-300",
-      activeBg: "bg-blue-50",
       clickable: false,
     },
     {
       id: "consumption" as const,
       title: "Consumption",
-      now:
-        liveMeter?.powerKw != null ? `${formatNumber(currentLoadKw, 3)} kW` : "—",
+      now: liveMeter?.powerKw != null ? `${formatNumber(currentLoadKw, 3)} kW` : "—",
       sub: "Grid + solar - export",
       accent: "bg-purple-500",
       text: "text-purple-600",
       activeRing: "ring-purple-300",
-      activeBg: "bg-purple-50",
       clickable: false,
     },
     {
@@ -483,17 +518,16 @@ export default function JuggleEnergyDashboardPrototype() {
       accent: "bg-slate-700",
       text: "text-slate-600",
       activeRing: "ring-slate-300",
-      activeBg: "bg-slate-50",
       clickable: false,
     },
   ];
 
-  const chartWidth = 860;
-  const chartHeight = 310;
-  const padLeft = 68;
+  const chartWidth = 760;
+  const chartHeight = 180;
+  const padLeft = 38;
   const padRight = 68;
-  const padTop = 22;
-  const padBottom = 54;
+  const padTop = 30;
+  const padBottom = 30;
   const plotWidth = chartWidth - padLeft - padRight;
   const plotHeight = chartHeight - padTop - padBottom;
 
@@ -564,11 +598,18 @@ export default function JuggleEnergyDashboardPrototype() {
   }, [chartRows]);
 
   const hoverIndexFromClientX = (clientX: number) => {
-    if (!chartWrapRef.current || chartRows.length === 0) return null;
-    const rect = chartWrapRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const normalized = Math.max(0, Math.min(rect.width, x));
-    const ratio = rect.width > 0 ? normalized / rect.width : 0;
+    if (!chartSvgRef.current || chartRows.length === 0) return null;
+
+    const rect = chartSvgRef.current.getBoundingClientRect();
+    const localX = clientX - rect.left;
+
+    const plotLeftPx = (padLeft / chartWidth) * rect.width;
+    const plotRightPx = ((chartWidth - padRight) / chartWidth) * rect.width;
+    const plotWidthPx = plotRightPx - plotLeftPx;
+
+    const clampedX = Math.max(plotLeftPx, Math.min(plotRightPx, localX));
+    const ratio = plotWidthPx > 0 ? (clampedX - plotLeftPx) / plotWidthPx : 0;
+
     const idx = Math.round(ratio * (chartRows.length - 1));
     return Math.max(0, Math.min(chartRows.length - 1, idx));
   };
@@ -582,13 +623,28 @@ export default function JuggleEnergyDashboardPrototype() {
     let tooltipLeft = 20;
     let tooltipTop = 20;
 
-    if (chartWrapRef.current && clientX !== undefined && clientY !== undefined) {
-      const rect = chartWrapRef.current.getBoundingClientRect();
-      const localX = clientX - rect.left;
-      const localY = clientY - rect.top;
+    if (chartSvgRef.current && clientX !== undefined && clientY !== undefined) {
+      const svgRect = chartSvgRef.current.getBoundingClientRect();
+      const wrapRect = chartWrapRef.current?.getBoundingClientRect() ?? svgRect;
 
-      tooltipLeft = Math.min(localX + 18, rect.width - 250);
-      tooltipTop = Math.max(12, Math.min(localY - 20, rect.height - 150));
+      const localXInSvg = clientX - svgRect.left;
+      const localYInSvg = clientY - svgRect.top;
+
+      const svgOffsetLeftInWrap = svgRect.left - wrapRect.left;
+      const svgOffsetTopInWrap = svgRect.top - wrapRect.top;
+
+      const tooltipWidth = 256;
+      const tooltipHeight = 150;
+
+      tooltipLeft = Math.max(
+        12,
+        Math.min(svgOffsetLeftInWrap + localXInSvg + 18, wrapRect.width - tooltipWidth - 12),
+      );
+
+      tooltipTop = Math.max(
+        12,
+        Math.min(svgOffsetTopInWrap + localYInSvg - 20, wrapRect.height - tooltipHeight - 12),
+      );
     }
 
     setHovered({
@@ -812,7 +868,7 @@ export default function JuggleEnergyDashboardPrototype() {
 
         <section className="mt-5 grid gap-3 md:grid-cols-5">
           {kpiCards.map((card) => {
-            const isActive = activeMetric === card.id;
+            const isActive = activeDeviceName === null && selectedKpiMetric === card.id;
 
             return (
               <button
@@ -820,21 +876,15 @@ export default function JuggleEnergyDashboardPrototype() {
                 type="button"
                 onClick={() => {
                   if (!card.clickable) return;
-                  setActiveMetric(card.id);
-
-                  if (card.id === "import" || card.id === "solar") {
-                    setShowImportKw(true);
-                  }
+                  handleMetricSelection(card.id);
                 }}
-            className={`rounded-2xl bg-white px-4 py-3 text-left shadow-sm transition ${
-  card.clickable
-    ? "cursor-pointer hover:-translate-y-[1px] hover:shadow-md"
-    : "cursor-default"
-} ${
-  isActive
-    ? `ring-2 ${card.activeRing}`
-    : "ring-1 ring-slate-200"
-}`}
+                className={`rounded-2xl bg-white px-4 py-3 text-left shadow-sm transition ${
+                  card.clickable
+                    ? "cursor-pointer hover:-translate-y-[1px] hover:shadow-md"
+                    : "cursor-default"
+                } ${
+                  isActive ? `ring-2 ${card.activeRing}` : "ring-1 ring-slate-200"
+                }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -845,8 +895,6 @@ export default function JuggleEnergyDashboardPrototype() {
                       {card.now}
                     </div>
                     <div className="mt-0.5 text-sm text-slate-500">{card.sub}</div>
-
-                   
                   </div>
 
                   <span className={`inline-block h-2.5 w-2.5 rounded-full ${card.accent}`} />
@@ -970,26 +1018,27 @@ export default function JuggleEnergyDashboardPrototype() {
               onMouseLeave={handleChartMouseLeave}
             >
               {loadingChart ? (
-                <div className="flex h-72 items-center justify-center text-slate-500">
+                <div className="flex h-80 items-center justify-center text-slate-500">
                   Loading API chart data…
                 </div>
               ) : chartError ? (
-                <div className="flex h-72 items-center justify-center px-6 text-center text-red-600">
+                <div className="flex h-80 items-center justify-center px-6 text-center text-red-600">
                   {chartError}
                 </div>
               ) : chartRows.length === 0 ? (
-                <div className="flex h-72 items-center justify-center text-slate-500">
+                <div className="flex h-80 items-center justify-center text-slate-500">
                   No API data in selected date range.
                 </div>
               ) : !showImportKw && !showImportKwh ? (
-                <div className="flex h-72 items-center justify-center text-slate-500">
+                <div className="flex h-80 items-center justify-center text-slate-500">
                   Select at least one series to display.
                 </div>
               ) : (
                 <>
                   <svg
+                    ref={chartSvgRef}
                     viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    className="h-72 w-full"
+                    className="block h-80 w-full"
                     preserveAspectRatio="none"
                   >
                     {yTicksLeft.map((tick, i) => {
@@ -1001,15 +1050,15 @@ export default function JuggleEnergyDashboardPrototype() {
                             y1={y}
                             x2={chartWidth - padRight}
                             y2={y}
-                            stroke={tick === 0 ? "rgba(71,85,105,0.35)" : "rgba(148,163,184,0.18)"}
+                            stroke={tick === 0 ? "rgba(51,65,85,0.5)" : "rgba(148,163,184,0.18)"}
                             strokeWidth={tick === 0 ? "1.5" : "1"}
                           />
                           <text
                             x={padLeft - 10}
                             y={y + 4}
                             textAnchor="end"
-                            fontSize="11"
-                            fill="#64748b"
+                            fontSize="12"
+                            fill="#334155"
                           >
                             {Math.round(tick)}
                           </text>
@@ -1025,8 +1074,8 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={chartWidth - padRight + 10}
                             y={y + 4}
                             textAnchor="start"
-                            fontSize="11"
-                            fill="#64748b"
+                            fontSize="12"
+                            fill="#334155"
                           >
                             {tick >= 10 ? Math.round(tick) : formatNumber(tick, 2)}
                           </text>
@@ -1048,10 +1097,11 @@ export default function JuggleEnergyDashboardPrototype() {
                           />
                           <text
                             x={x}
-                            y={chartHeight - 12}
+                            y={chartHeight - 6}
                             textAnchor="middle"
-                            fontSize="11"
-                            fill="#64748b"
+                            fontSize="10"
+                            fill="#334155"
+                            fontWeight="500"
                           >
                             {formatAxisDate(chartRows[idx].ts)}
                           </text>
@@ -1059,17 +1109,26 @@ export default function JuggleEnergyDashboardPrototype() {
                       );
                     })}
 
-                    <text x={padLeft - 14} y={padTop - 8} fontSize="12" fill="#64748b">
-                      kW
-                    </text>
-                    <text
-                      x={chartWidth - padRight + 14}
-                      y={padTop - 8}
-                      fontSize="12"
-                      fill="#64748b"
-                    >
-                      kWh
-                    </text>
+                 <text
+  x={padLeft - 10}
+  y={padTop - 12}
+  textAnchor="end"
+  fontSize="11"
+  fill="rgba(30,41,59,0.8)"
+  fontWeight="600"
+>
+  kW
+</text>
+<text
+  x={chartWidth - padRight + 10}
+  y={padTop - 12}
+  textAnchor="start"
+  fontSize="11"
+  fill="rgba(30,41,59,0.8)"
+  fontWeight="600"
+>
+  kWh
+</text>
 
                     {showImportKwh && (
                       <>
@@ -1206,38 +1265,75 @@ export default function JuggleEnergyDashboardPrototype() {
             </div>
 
             <div className="space-y-2">
-              {devices.map((device) => (
-                <div
-                  key={device.name}
-                  className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
-                      <img
-                        src={device.image}
-                        alt={device.type}
-                        className="h-full w-full object-contain p-0.5"
-                      />
-                    </div>
+              {devices.map((device) => {
+                const isSelected = activeDeviceName === device.name;
+                const activeRing = getMetricRing(device.metric);
 
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{device.name}</div>
-                      <div
-                        className={`text-xs ${
-                          device.status === "Online" ? "text-emerald-600" : "text-red-500"
-                        }`}
-                      >
-                        {device.status}
+                return (
+                  <button
+                    key={device.name}
+                    type="button"
+                    onClick={() => {
+                      if (!device.clickable || !device.metric) return;
+
+                      if (activeDeviceName === device.name) {
+                        setActiveDeviceName(null);
+                        setActiveMetric(selectedKpiMetric);
+
+                        if (selectedKpiMetric === "import" || selectedKpiMetric === "solar") {
+                          setShowImportKw(true);
+                        }
+
+                        return;
+                      }
+
+                      setActiveDeviceName(device.name);
+                      setActiveMetric(device.metric);
+
+                      if (device.metric === "import" || device.metric === "solar") {
+                        setShowImportKw(true);
+                      }
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition ${
+                      device.clickable
+                        ? "cursor-pointer hover:shadow-sm"
+                        : "cursor-default"
+                    } ${
+                      isSelected
+                        ? `ring-2 ${activeRing}`
+                        : "border-slate-200"
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
+                        <img
+                          src={device.image}
+                          alt={device.type}
+                          className="h-full w-full object-contain p-0.5"
+                        />
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{device.name}</div>
+                        <div
+                          className={`text-xs ${
+                            device.status === "Online" ? "text-emerald-600" : "text-red-500"
+                          }`}
+                        >
+                          {device.status}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="ml-3 text-right">
-                    <div className="text-sm font-semibold">{device.read}</div>
-                    <div className="text-xs text-slate-500">Instant read</div>
-                  </div>
-                </div>
-              ))}
+                    <div className="ml-3 text-right">
+                      <div className="text-sm font-semibold">{device.read}</div>
+                      <div className="text-xs text-slate-500">
+                        {device.clickable ? "Click to plot" : "Instant read"}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
