@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type Device = {
   name: string;
-  type: "Inverter" | "Meter" | "Battery";
+  type: "Inverter" | "Meter" | "Battery" | "Weather";
   status: "Online" | "Offline";
   read: string;
   image: string;
@@ -275,6 +275,13 @@ export default function JuggleEnergyDashboardPrototype() {
     rangeLabel === "Custom" ? `${daysBetweenInclusive(dateFrom, dateTo)} days` : rangeLabel;
 
   const devices: Device[] = [
+    {
+  name: "Weather Station",
+  type: "Weather",
+  status: "Online",
+  read: "22°C • 720 W/m²",
+  image: "/device-weather.png",
+},
     {
       name: "Inverter 1",
       type: "Inverter",
@@ -666,7 +673,7 @@ export default function JuggleEnergyDashboardPrototype() {
     },
     {
       title: "Grid Import",
-      now: "56.3 kW",
+      now: "53.6 kW",
       sub: "860 kWh today",
       accent: "bg-amber-500",
       text: "text-amber-600",
