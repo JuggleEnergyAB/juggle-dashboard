@@ -531,8 +531,8 @@ export default function JuggleEnergyDashboardPrototype() {
   const plotWidth = chartWidth - padLeft - padRight;
   const plotHeight = chartHeight - padTop - padBottom;
 
-  const kwMaxRaw = Math.max(1, ...chartRows.map((r) => r.importKw));
-  const kwDomainTop = Math.ceil(kwMaxRaw / 10) * 10;
+const kwMaxRaw = Math.max(1, ...chartRows.map((r) => r.importKw));
+const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
 
   const kwhDomainTop =
     Math.ceil(Math.max(1, ...chartRows.map((r) => r.importEnergyKwh ?? 0)) / 10) * 10;
@@ -1149,7 +1149,7 @@ export default function JuggleEnergyDashboardPrototype() {
                         d={importKwLine}
                         fill="none"
                         stroke={chartTheme.line}
-                        strokeWidth="2.2"
+                        strokeWidth="1.2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
