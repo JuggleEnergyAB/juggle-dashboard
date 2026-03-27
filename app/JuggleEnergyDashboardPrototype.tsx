@@ -22,6 +22,14 @@ type CsvRow = {
   generationKw: number;
 };
 
+type ApiImportRow = {
+  ts: string;
+  importKw: number;
+  exportKw: number;
+  importEnergyKwh: number | null;
+  exportEnergyKwh: number | null;
+};
+
 type HoverPoint = {
   index: number;
   x: number;
@@ -103,6 +111,12 @@ function formatAxisDate(ts: string): string {
   });
 }
 
+function normaliseTimestampKey(ts: string): string {
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return ts.slice(0, 16);
+  return d.toISOString().slice(0, 16);
+}
+
 export default function JuggleEnergyDashboardPrototype() {
   const pathname = usePathname();
   const chartWrapRef = useRef<HTMLDivElement | null>(null);
@@ -117,6 +131,9 @@ export default function JuggleEnergyDashboardPrototype() {
     consumptionKw: number | null;
     ts: string | null;
   } | null>(null);
+
+  const [apiImportRows, setApiImportRows] = useState<ApiImportRow[]>([]);
+  const [loadingImportData, setLoadingImportData] = useState(true);
 
   const [rawRows, setRawRows] = useState<CsvRow[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -251,11 +268,55 @@ export default function JuggleEnergyDashboardPrototype() {
     }
 
     loadLiveMeter();
+    const interval = setInterval(loadLiveMeter, 60000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!dateFrom || !dateTo) return;
+
+    let cancelled = false;
+
+    async function loadImportChartData() {
+      try {
+        setLoadingImportData(true);
+
+        const res = await fetch(
+          `/api/juggle/current-meter?from=${dateFrom}&to=${dateTo}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        if (!res.ok) throw new Error("Failed to load meter chart data");
+
+        const json = await res.json();
+
+        if (!cancelled) {
+          setApiImportRows(json.chartReadings ?? []);
+        }
+      } catch (err) {
+        console.error("Chart meter error:", err);
+        if (!cancelled) {
+          setApiImportRows([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingImportData(false);
+        }
+      }
+    }
+
+    loadImportChartData();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [dateFrom, dateTo]);
 
   const toggleHero = () => {
     const next = !heroCollapsed;
@@ -292,20 +353,39 @@ export default function JuggleEnergyDashboardPrototype() {
     }
   };
 
-  const filteredRows = useMemo(() => {
+  const filteredCsvRows = useMemo(() => {
     if (!dateFrom || !dateTo) return [];
     return rawRows.filter((row) => row.day >= dateFrom && row.day <= dateTo);
   }, [rawRows, dateFrom, dateTo]);
+
+  const filteredRows = useMemo(() => {
+    if (!filteredCsvRows.length) return [];
+
+    if (!apiImportRows.length) return filteredCsvRows;
+
+    const apiMap = new Map(
+      apiImportRows.map((row) => [normaliseTimestampKey(row.ts), row.importKw]),
+    );
+
+    return filteredCsvRows.map((row) => {
+      const key = normaliseTimestampKey(row.timestamp);
+      const matchedImportKw = apiMap.get(key);
+
+      return {
+        ...row,
+        importKw: matchedImportKw ?? row.importKw,
+      };
+    });
+  }, [filteredCsvRows, apiImportRows]);
 
   const latestCsvRow = useMemo(() => {
     return rawRows.length ? rawRows[rawRows.length - 1] : null;
   }, [rawRows]);
 
   const currentSolarKw = latestCsvRow?.generationKw ?? 0;
-  const currentGridKw = liveMeter?.powerKw ?? latestCsvRow?.importKw ?? 0;
-
+  const currentGridKw = liveMeter?.powerKw ?? 0;
   const currentExportKw = liveMeter?.exportKw ?? 0;
-const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExportKw);
+  const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExportKw);
 
   const totalGenerationKwh = useMemo(
     () => filteredRows.reduce((sum, r) => sum + r.generationKwhRel, 0),
@@ -604,11 +684,11 @@ const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExport
               </div>
 
               <div className="absolute left-1/2 top-[38px] -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-  <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
-    {formatNumber(currentLoadKw, 1)}
-    <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
-  </div>
-</div>
+                <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
+                  {formatNumber(currentLoadKw, 1)}
+                  <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
+                </div>
+              </div>
 
               <div className="absolute right-12 top-5 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
@@ -691,10 +771,10 @@ const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExport
                   {formatNumber(currentSolarKw, 1)} kW
                 </div>
               </div>
-             <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-  <div className="text-sm text-slate-500">Building</div>
-  <div className="mt-1 text-xl font-semibold">{formatNumber(currentLoadKw, 1)} kW</div>
-</div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                <div className="text-sm text-slate-500">Building</div>
+                <div className="mt-1 text-xl font-semibold">{formatNumber(currentLoadKw, 1)} kW</div>
+              </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
                 <div className="text-sm text-slate-500">Grid</div>
                 <div className="mt-1 text-xl font-semibold">
@@ -745,8 +825,8 @@ const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExport
             },
             {
               title: "Consumption",
-            now: `${formatNumber(currentLoadKw, 1)} kW`,
-sub: "Grid + solar - export",
+              now: `${formatNumber(currentLoadKw, 1)} kW`,
+              sub: "Grid + solar - export",
               accent: "bg-purple-500",
               text: "text-purple-600",
             },
@@ -785,7 +865,7 @@ sub: "Grid + solar - export",
               <div>
                 <h2 className="text-2xl font-semibold">Weekly Energy</h2>
                 <div className="mt-1 text-sm text-slate-500">
-                  15-minute site data with hover readout
+                  Solar from CSV + grid import from live API
                 </div>
               </div>
 
@@ -850,7 +930,7 @@ sub: "Grid + solar - export",
               </div>
               <div className="flex items-center gap-2 text-slate-600">
                 <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
-                Import / Export kW
+                Grid Import kW
               </div>
             </div>
 
@@ -860,9 +940,9 @@ sub: "Grid + solar - export",
               onMouseMove={handleChartMouseMove}
               onMouseLeave={handleChartMouseLeave}
             >
-              {loadingData ? (
+              {loadingData || loadingImportData ? (
                 <div className="flex h-72 items-center justify-center text-slate-500">
-                  Loading 15-minute data…
+                  Loading chart data…
                 </div>
               ) : dataError ? (
                 <div className="flex h-72 items-center justify-center px-6 text-center text-red-600">
@@ -1005,13 +1085,13 @@ sub: "Grid + solar - export",
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-slate-700">
                         <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
-                        Import / Export:{" "}
+                        Grid Import:{" "}
                         <span className="font-semibold">
-                          {formatNumber(hovered.row.importKw, 2)} kW
+                          {formatNumber(hovered.row.importKw, 3)} kW
                         </span>
                       </div>
                       <div className="mt-1 text-slate-600">
-                        Interval energy:{" "}
+                        Interval solar energy:{" "}
                         <span className="font-semibold">
                           {formatNumber(hovered.row.generationKwhRel, 4)} kWh
                         </span>
