@@ -110,6 +110,14 @@ export default function JuggleEnergyDashboardPrototype() {
   const [heroCollapsed, setHeroCollapsed] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
 
+  const [liveMeter, setLiveMeter] = useState<{
+    generationKwh: number | null;
+    powerKw: number | null;
+    exportKw: number | null;
+    consumptionKw: number | null;
+    ts: string | null;
+  } | null>(null);
+
   const [rawRows, setRawRows] = useState<CsvRow[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -221,6 +229,34 @@ export default function JuggleEnergyDashboardPrototype() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLiveMeter() {
+      try {
+        const res = await fetch("/api/juggle/current-meter", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) throw new Error("Failed to load live meter data");
+
+        const json = await res.json();
+
+        if (!cancelled) {
+          setLiveMeter(json.metrics);
+        }
+      } catch (err) {
+        console.error("Live meter error:", err);
+      }
+    }
+
+    loadLiveMeter();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const toggleHero = () => {
     const next = !heroCollapsed;
     setHeroCollapsed(next);
@@ -261,13 +297,26 @@ export default function JuggleEnergyDashboardPrototype() {
     return rawRows.filter((row) => row.day >= dateFrom && row.day <= dateTo);
   }, [rawRows, dateFrom, dateTo]);
 
+  const latestCsvRow = useMemo(() => {
+    return rawRows.length ? rawRows[rawRows.length - 1] : null;
+  }, [rawRows]);
+
+  const currentSolarKw = latestCsvRow?.generationKw ?? 0;
+  const currentGridKw = liveMeter?.powerKw ?? latestCsvRow?.importKw ?? 0;
+
+  const currentExportKw = liveMeter?.exportKw ?? 0;
+const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExportKw);
+
   const totalGenerationKwh = useMemo(
     () => filteredRows.reduce((sum, r) => sum + r.generationKwhRel, 0),
     [filteredRows],
   );
 
   const averagePerDayKwh = useMemo(() => {
-    const days = Math.max(1, daysBetweenInclusive(dateFrom || "2026-01-01", dateTo || "2026-01-01"));
+    const days = Math.max(
+      1,
+      daysBetweenInclusive(dateFrom || "2026-01-01", dateTo || "2026-01-01"),
+    );
     return totalGenerationKwh / days;
   }, [dateFrom, dateTo, totalGenerationKwh]);
 
@@ -297,10 +346,13 @@ export default function JuggleEnergyDashboardPrototype() {
       image: "/device-inverter.png",
     },
     {
-      name: "Meter 1",
+      name: "Grid Import Meter",
       type: "Meter",
       status: "Online",
-      read: "156.0 kW",
+      read:
+        liveMeter?.powerKw != null
+          ? `${formatNumber(liveMeter.powerKw, 3)} kW`
+          : "Loading...",
       image: "/device-meter.png",
     },
     {
@@ -546,21 +598,21 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute left-[170px] top-[20px] rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
-                  102.4
+                  {formatNumber(currentSolarKw, 1)}
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
                 </div>
               </div>
 
               <div className="absolute left-1/2 top-[38px] -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
-                  156
-                  <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
-                </div>
-              </div>
+  <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
+    {formatNumber(currentLoadKw, 1)}
+    <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
+  </div>
+</div>
 
               <div className="absolute right-12 top-5 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
-                  53.6
+                  {liveMeter?.powerKw != null ? formatNumber(liveMeter.powerKw, 3) : "—"}
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
                 </div>
               </div>
@@ -635,15 +687,19 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
                 <div className="text-sm text-slate-500">Solar</div>
-                <div className="mt-1 text-xl font-semibold">104.2 kW</div>
+                <div className="mt-1 text-xl font-semibold">
+                  {formatNumber(currentSolarKw, 1)} kW
+                </div>
               </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-                <div className="text-sm text-slate-500">Building</div>
-                <div className="mt-1 text-xl font-semibold">156 kW</div>
-              </div>
+             <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+  <div className="text-sm text-slate-500">Building</div>
+  <div className="mt-1 text-xl font-semibold">{formatNumber(currentLoadKw, 1)} kW</div>
+</div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
                 <div className="text-sm text-slate-500">Grid</div>
-                <div className="mt-1 text-xl font-semibold">92.0 kW</div>
+                <div className="mt-1 text-xl font-semibold">
+                  {liveMeter?.powerKw != null ? `${formatNumber(liveMeter.powerKw, 3)} kW` : "—"}
+                </div>
               </div>
               <div className="rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-200">
                 <div className="text-sm text-emerald-700">Battery</div>
@@ -657,29 +713,40 @@ export default function JuggleEnergyDashboardPrototype() {
           {[
             {
               title: "Solar Generation",
-              now: "102.4 kW",
-              sub: "721 kWh today",
+              now: `${formatNumber(currentSolarKw, 1)} kW`,
+              sub: latestCsvRow
+                ? `${formatNumber(latestCsvRow.generationKwhRel, 2)} kWh interval`
+                : "Loading...",
               accent: "bg-lime-600",
               text: "text-lime-700",
             },
             {
               title: "Grid Import",
-              now: "53.6 kW",
-              sub: "860 kWh today",
+              now:
+                liveMeter?.powerKw != null
+                  ? `${formatNumber(liveMeter.powerKw, 3)} kW`
+                  : "—",
+              sub:
+                liveMeter?.generationKwh != null
+                  ? `${formatNumber(liveMeter.generationKwh, 0)} kWh total`
+                  : "Loading...",
               accent: "bg-amber-500",
               text: "text-amber-600",
             },
             {
               title: "Grid Export",
-              now: "0.00 kW",
-              sub: "640 kWh today",
+              now:
+                liveMeter?.exportKw != null
+                  ? `${formatNumber(liveMeter.exportKw, 3)} kW`
+                  : "—",
+              sub: "Live export power",
               accent: "bg-blue-500",
               text: "text-blue-600",
             },
             {
               title: "Consumption",
-              now: "156 kW",
-              sub: "1.58 MWh today",
+            now: `${formatNumber(currentLoadKw, 1)} kW`,
+sub: "Grid + solar - export",
               accent: "bg-purple-500",
               text: "text-purple-600",
             },
