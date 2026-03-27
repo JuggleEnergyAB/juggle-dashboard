@@ -276,12 +276,12 @@ export default function JuggleEnergyDashboardPrototype() {
 
   const devices: Device[] = [
     {
-  name: "Weather Station",
-  type: "Weather",
-  status: "Online",
-  read: "22°C • 720 W/m²",
-  image: "/device-weather.png",
-},
+      name: "Weather Station",
+      type: "Weather",
+      status: "Online",
+      read: "22°C • 720 W/m²",
+      image: "/device-weather.png",
+    },
     {
       name: "Inverter 1",
       type: "Inverter",
@@ -540,24 +540,18 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(15,23,42,0.05))]" />
 
-              <div className="absolute left-6 top-15 rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                </div>
+              <div className="absolute left-6 top-[60px] rounded-2xl border border-white/60 bg-white/80 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-xl font-semibold text-slate-900">722 W/m²</div>
               </div>
 
               <div className="absolute left-[170px] top-[20px] rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                </div>
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   102.4
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
                 </div>
               </div>
 
-              <div className="absolute left-1/2 top-9.5 -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                </div>
+              <div className="absolute left-1/2 top-[38px] -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   156
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
@@ -565,8 +559,6 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
 
               <div className="absolute right-12 top-5 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                </div>
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   53.6
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
@@ -598,28 +590,27 @@ export default function JuggleEnergyDashboardPrototype() {
                   </filter>
                 </defs>
 
-
                 <g filter="url(#sparkGlow)">
-  <path
-    d="M -4 -6 L 1 -2 L -1 -2 L 4 6 L -1 2 L 1 2 Z"
-    fill="rgba(252, 236, 179, 0.98)"
-  />
-  <animateMotion
-    dur="3.9s"
-    begin="0s;gridspark.end+8s"
-    repeatCount="indefinite"
-    rotate="auto"
-    path="M930 118 C 845 118, 770 118, 690 118"
-  />
-  <animate
-    id="gridspark"
-    attributeName="opacity"
-    values="0;1;1;0"
-    dur="3.9s"
-    begin="0s;gridspark.end+8s"
-    repeatCount="indefinite"
-  />
-</g>
+                  <path
+                    d="M -4 -6 L 1 -2 L -1 -2 L 4 6 L -1 2 L 1 2 Z"
+                    fill="rgba(252, 236, 179, 0.98)"
+                  />
+                  <animateMotion
+                    dur="3.9s"
+                    begin="0s;gridspark.end+8s"
+                    repeatCount="indefinite"
+                    rotate="auto"
+                    path="M930 118 C 845 118, 770 118, 690 118"
+                  />
+                  <animate
+                    id="gridspark"
+                    attributeName="opacity"
+                    values="0;1;1;0"
+                    dur="3.9s"
+                    begin="0s;gridspark.end+8s"
+                    repeatCount="indefinite"
+                  />
+                </g>
               </svg>
             </div>
           </section>
@@ -662,150 +653,66 @@ export default function JuggleEnergyDashboardPrototype() {
           </section>
         )}
 
-       <section className="mt-5 grid gap-3 md:grid-cols-5">
-  {[
-    {
-      title: "Solar Generation",
-      now: "102.4 kW",
-      sub: "721 kWh today",
-      accent: "bg-lime-600",
-      text: "text-lime-700",
-    },
-    {
-      title: "Grid Import",
-      now: "53.6 kW",
-      sub: "860 kWh today",
-      accent: "bg-amber-500",
-      text: "text-amber-600",
-    },
-    {
-      title: "Grid Export",
-      now: "0.00 kW",
-      sub: "640 kWh today",
-      accent: "bg-blue-500",
-      text: "text-blue-600",
-    },
-    {
-      title: "Consumption",
-      now: "156 kW",
-      sub: "1.58 MWh oday",
-      accent: "bg-purple-500",
-      text: "text-purple-600",
-    },
-    {
-      title: "Battery Storage",
-      now: "94%",
-      sub: "18.3 kW charging",
-      accent: "bg-slate-700",
-      text: "text-slate-600",
-    },
-  ].map((card) => (
-    <div
-      key={card.title}
-      className="rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className={`text-xs font-semibold uppercase tracking-[0.12em] ${card.text}`}>
-            {card.title}
-          </div>
-          <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-            {card.now}
-          </div>
-          <div className="mt-0.5 text-sm text-slate-500">{card.sub}</div>
-        </div>
+        <section className="mt-5 grid gap-3 md:grid-cols-5">
+          {[
+            {
+              title: "Solar Generation",
+              now: "102.4 kW",
+              sub: "721 kWh today",
+              accent: "bg-lime-600",
+              text: "text-lime-700",
+            },
+            {
+              title: "Grid Import",
+              now: "53.6 kW",
+              sub: "860 kWh today",
+              accent: "bg-amber-500",
+              text: "text-amber-600",
+            },
+            {
+              title: "Grid Export",
+              now: "0.00 kW",
+              sub: "640 kWh today",
+              accent: "bg-blue-500",
+              text: "text-blue-600",
+            },
+            {
+              title: "Consumption",
+              now: "156 kW",
+              sub: "1.58 MWh today",
+              accent: "bg-purple-500",
+              text: "text-purple-600",
+            },
+            {
+              title: "Battery Storage",
+              now: "94%",
+              sub: "18.3 kW charging",
+              accent: "bg-slate-700",
+              text: "text-slate-600",
+            },
+          ].map((card) => (
+            <div
+              key={card.title}
+              className="rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className={`text-xs font-semibold uppercase tracking-[0.12em] ${card.text}`}>
+                    {card.title}
+                  </div>
+                  <div className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+                    {card.now}
+                  </div>
+                  <div className="mt-0.5 text-sm text-slate-500">{card.sub}</div>
+                </div>
 
-        <span className={`inline-block h-2.5 w-2.5 rounded-full ${card.accent}`} />
-      </div>
-    </div>
-  ))}
-</section>
-
-       <section className="mt-6 grid gap-6 lg:grid-cols-2">
-  <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-    <div className="mb-3 flex items-center justify-between">
-      <h2 className="text-2xl font-semibold">Device Overview</h2>
-      <div className="text-sm text-slate-500">6 devices</div>
-    </div>
-
-    <div className="space-y-2">
-      {devices.map((device) => (
-        <div
-          key={device.name}
-          className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5"
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
-              <img
-                src={device.image}
-                alt={device.type}
-                className="h-full w-full object-contain p-0.5"
-              />
-            </div>
-
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium">{device.name}</div>
-              <div
-                className={`text-xs ${
-                  device.status === "Online" ? "text-emerald-600" : "text-red-500"
-                }`}
-              >
-                {device.status}
+                <span className={`inline-block h-2.5 w-2.5 rounded-full ${card.accent}`} />
               </div>
             </div>
-          </div>
+          ))}
+        </section>
 
-          <div className="ml-3 text-right">
-            <div className="text-sm font-semibold">{device.read}</div>
-            <div className="text-xs text-slate-500">Instant read</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-
-  <div className="flex flex-col gap-6">
-    <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <h2 className="text-2xl font-semibold">Critical Alarms</h2>
-      <div className="mt-3 space-y-2">
-        {[
-          "Inverter 3 offline - Last read - 18:23 25/03/26",
-          "Grid Export Limit Breach - 12:03 26/03/26",
-          "Weather station - Wind speed no reading - 08:02 01/03/26",
-        ].map((alarm) => (
-          <div
-            key={alarm}
-            className="rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700 ring-1 ring-red-100"
-          >
-            {alarm}
-          </div>
-        ))}
-      </div>
-    </div>
-
-    <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <h2 className="text-2xl font-semibold">System Status</h2>
-      <div className="mt-4 grid gap-3">
-        {[
-          ["G100 export limit", "OK"],
-          ["Switchgear", "OK"],
-          ["Weather station", "Online"],
-          ["JBox signal", "Fair"],
-        ].map(([label, value]) => (
-          <div
-            key={label}
-            className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
-          >
-            <span className="text-slate-600">{label}</span>
-            <span className="font-semibold">{value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
+        <section className="mt-6">
           <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -1063,10 +970,92 @@ export default function JuggleEnergyDashboardPrototype() {
               </div>
             </div>
           </div>
-
-
         </section>
-  </main>
+
+        <section className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">Device Overview</h2>
+              <div className="text-sm text-slate-500">7 devices</div>
+            </div>
+
+            <div className="space-y-2">
+              {devices.map((device) => (
+                <div
+                  key={device.name}
+                  className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
+                      <img
+                        src={device.image}
+                        alt={device.type}
+                        className="h-full w-full object-contain p-0.5"
+                      />
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{device.name}</div>
+                      <div
+                        className={`text-xs ${
+                          device.status === "Online" ? "text-emerald-600" : "text-red-500"
+                        }`}
+                      >
+                        {device.status}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="ml-3 text-right">
+                    <div className="text-sm font-semibold">{device.read}</div>
+                    <div className="text-xs text-slate-500">Instant read</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <h2 className="text-2xl font-semibold">Critical Alarms</h2>
+              <div className="mt-3 space-y-2">
+                {[
+                  "Inverter 3 offline - Last read - 18:23 25/03/26",
+                  "Grid Export Limit Breach - 12:03 26/03/26",
+                  "Weather station - Wind speed no reading - 08:02 01/03/26",
+                ].map((alarm) => (
+                  <div
+                    key={alarm}
+                    className="rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700 ring-1 ring-red-100"
+                  >
+                    {alarm}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <h2 className="text-2xl font-semibold">System Status</h2>
+              <div className="mt-4 grid gap-3">
+                {[
+                  ["G100 export limit", "OK"],
+                  ["Switchgear", "OK"],
+                  ["Weather station", "Online"],
+                  ["JBox signal", "Fair"],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"
+                  >
+                    <span className="text-slate-600">{label}</span>
+                    <span className="font-semibold">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <style jsx global>{`
         @media (prefers-reduced-motion: reduce) {
