@@ -1364,7 +1364,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={padLeft - 10}
                             y={y + 4}
                             textAnchor="end"
-                            fontSize="9"
+                            fontSize="8"
                             fill="#334155"
                           >
                             {tick.toFixed(1)}
@@ -1381,7 +1381,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={chartWidth - padRight + 10}
                             y={y + 4}
                             textAnchor="start"
-                            fontSize="9"
+                            fontSize="8"
                             fill="#334155"
                           >
                             {tick >= 10 ? Math.round(tick) : formatNumber(tick, 2)}
@@ -1406,7 +1406,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={x}
                             y={chartHeight - 6}
                             textAnchor="middle"
-                            fontSize="10"
+                            fontSize="8"
                             fill="#334155"
                             fontWeight="500"
                           >
@@ -1420,7 +1420,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       x={padLeft - 10}
                       y={padTop - 12}
                       textAnchor="end"
-                      fontSize="11"
+                      fontSize="9"
                       fill="rgba(30,41,59,0.8)"
                       fontWeight="600"
                     >
@@ -1430,7 +1430,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       x={chartWidth - padRight + 10}
                       y={padTop - 12}
                       textAnchor="start"
-                      fontSize="11"
+                      fontSize="9"
                       fill="rgba(30,41,59,0.8)"
                       fontWeight="600"
                     >
@@ -1444,7 +1444,7 @@ export default function JuggleEnergyDashboardPrototype() {
                           d={importKwhLine}
                           fill="none"
                           stroke={chartTheme.secondary}
-                          strokeWidth="2"
+                          strokeWidth="1.2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
