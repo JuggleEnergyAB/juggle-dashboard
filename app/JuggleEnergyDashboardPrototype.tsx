@@ -18,12 +18,10 @@ type Device = {
   detailLine2?: string;
 };
 
-type ApiChartRow = {
+type ChartSeriesRow = {
   ts: string;
-  importKw: number;
-  exportKw: number;
-  importEnergyKwh: number | null;
-  exportEnergyKwh: number | null;
+  powerKw: number;
+  energyKwh: number | null;
 };
 
 type HoverPoint = {
@@ -31,7 +29,8 @@ type HoverPoint = {
   x: number;
   tooltipLeft: number;
   tooltipTop: number;
-  row: ApiChartRow;
+  importRow: ChartSeriesRow | null;
+  solarRow: ChartSeriesRow | null;
 };
 
 type LiveInverter = {
@@ -43,6 +42,15 @@ type LiveInverter = {
   yieldKwh: number | null;
   ts: string | null;
   status: "Online" | "Offline";
+};
+
+type LiveFeedMetrics = {
+  generationKwh: number | null;
+  powerKw: number | null;
+  exportKw: number | null;
+  consumptionKw: number | null;
+  ts: string | null;
+  importKwhToday?: number | null;
 };
 
 function shiftDate(dateStr: string, days: number): string {
@@ -139,6 +147,38 @@ function getMetricRing(metric?: ChartMetric): string {
   }
 }
 
+function toNumberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function normalizeChartRows(rows: unknown[]): ChartSeriesRow[] {
+  return rows
+    .map((raw) => {
+      const row = raw as Record<string, unknown>;
+      const ts = typeof row.ts === "string" ? row.ts : null;
+      if (!ts) return null;
+
+      const powerKw =
+        toNumberOrNull(row.importKw) ??
+        toNumberOrNull(row.powerKw) ??
+        toNumberOrNull(row.solarKw) ??
+        toNumberOrNull(row.generationKw) ??
+        0;
+
+      const energyKwh =
+        toNumberOrNull(row.importEnergyKwh) ??
+        toNumberOrNull(row.energyKwh) ??
+        toNumberOrNull(row.generationKwh);
+
+      return {
+        ts,
+        powerKw,
+        energyKwh,
+      };
+    })
+    .filter((row): row is ChartSeriesRow => row !== null);
+}
+
 export default function JuggleEnergyDashboardPrototype() {
   const pathname = usePathname();
   const chartWrapRef = useRef<HTMLDivElement | null>(null);
@@ -147,19 +187,14 @@ export default function JuggleEnergyDashboardPrototype() {
   const [heroCollapsed, setHeroCollapsed] = useState(false);
   const [heroReady, setHeroReady] = useState(false);
 
-  const [liveMeter, setLiveMeter] = useState<{
-    generationKwh: number | null;
-    powerKw: number | null;
-    exportKw: number | null;
-    consumptionKw: number | null;
-    ts: string | null;
-    importKwhToday?: number | null;
-  } | null>(null);
+  const [liveMeter, setLiveMeter] = useState<LiveFeedMetrics | null>(null);
+  const [liveSolar, setLiveSolar] = useState<LiveFeedMetrics | null>(null);
 
   const [todayImportKwh, setTodayImportKwh] = useState<number | null>(null);
   const [liveInverters, setLiveInverters] = useState<LiveInverter[]>([]);
 
-  const [chartRows, setChartRows] = useState<ApiChartRow[]>([]);
+  const [importChartRows, setImportChartRows] = useState<ChartSeriesRow[]>([]);
+  const [solarChartRows, setSolarChartRows] = useState<ChartSeriesRow[]>([]);
   const [loadingChart, setLoadingChart] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
 
@@ -171,7 +206,9 @@ export default function JuggleEnergyDashboardPrototype() {
   const [rangeLabel, setRangeLabel] = useState("Today");
 
   const [showImportKw, setShowImportKw] = useState(true);
+  const [showSolarKw, setShowSolarKw] = useState(true);
   const [showImportKwh, setShowImportKwh] = useState(false);
+
   const [activeMetric, setActiveMetric] = useState<ChartMetric>("import");
   const [selectedKpiMetric, setSelectedKpiMetric] = useState<ChartMetric>("import");
   const [activeDeviceName, setActiveDeviceName] = useState<string | null>(null);
@@ -234,6 +271,39 @@ export default function JuggleEnergyDashboardPrototype() {
   useEffect(() => {
     let cancelled = false;
 
+    async function loadLiveSolar() {
+      try {
+        const res = await fetch("/api/juggle/current-solar", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) throw new Error("Failed to load live solar data");
+
+        const json = await res.json();
+
+        if (!cancelled) {
+          setLiveSolar(json.metrics ?? null);
+        }
+      } catch (err) {
+        console.error("Live solar error:", err);
+        if (!cancelled) {
+          setLiveSolar(null);
+        }
+      }
+    }
+
+    loadLiveSolar();
+    const interval = setInterval(loadLiveSolar, 300000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function loadTodayImportKwh() {
       try {
         const today = new Date().toISOString().slice(0, 10);
@@ -245,13 +315,13 @@ export default function JuggleEnergyDashboardPrototype() {
         if (!res.ok) throw new Error("Failed to load today's import energy");
 
         const json = await res.json();
-        const rows = (json.chartReadings ?? []) as ApiChartRow[];
+        const rows = normalizeChartRows((json.chartReadings ?? []) as unknown[]);
 
         let value = 0;
 
         if (rows.length > 0) {
-          const first = rows[0]?.importEnergyKwh ?? 0;
-          const last = rows[rows.length - 1]?.importEnergyKwh ?? 0;
+          const first = rows[0]?.energyKwh ?? 0;
+          const last = rows[rows.length - 1]?.energyKwh ?? 0;
           value = Math.max(0, last - first);
         }
 
@@ -318,22 +388,29 @@ export default function JuggleEnergyDashboardPrototype() {
         setLoadingChart(true);
         setChartError(null);
 
-        const res = await fetch(`/api/juggle/current-meter?from=${dateFrom}&to=${dateTo}`, {
-          cache: "no-store",
-        });
+        const [importRes, solarRes] = await Promise.all([
+          fetch(`/api/juggle/current-meter?from=${dateFrom}&to=${dateTo}`, {
+            cache: "no-store",
+          }),
+          fetch(`/api/juggle/current-solar?from=${dateFrom}&to=${dateTo}`, {
+            cache: "no-store",
+          }),
+        ]);
 
-        if (!res.ok) throw new Error("Failed to load chart data");
+        if (!importRes.ok) throw new Error("Failed to load import chart data");
+        if (!solarRes.ok) throw new Error("Failed to load solar chart data");
 
-        const json = await res.json();
-        const rows = (json.chartReadings ?? []) as ApiChartRow[];
+        const [importJson, solarJson] = await Promise.all([importRes.json(), solarRes.json()]);
 
         if (!cancelled) {
-          setChartRows(rows);
+          setImportChartRows(normalizeChartRows((importJson.chartReadings ?? []) as unknown[]));
+          setSolarChartRows(normalizeChartRows((solarJson.chartReadings ?? []) as unknown[]));
         }
       } catch (err) {
         if (!cancelled) {
           setChartError(err instanceof Error ? err.message : "Failed to load chart data.");
-          setChartRows([]);
+          setImportChartRows([]);
+          setSolarChartRows([]);
         }
       } finally {
         if (!cancelled) {
@@ -389,68 +466,36 @@ export default function JuggleEnergyDashboardPrototype() {
       ? `${daysBetweenInclusive(dateFrom, dateTo)} days`
       : rangeLabel;
 
-  const latestChartRow = useMemo(() => {
-    return chartRows.length ? chartRows[chartRows.length - 1] : null;
-  }, [chartRows]);
+  const latestImportChartRow = useMemo(() => {
+    return importChartRows.length ? importChartRows[importChartRows.length - 1] : null;
+  }, [importChartRows]);
 
-  const currentGridKw = liveMeter?.powerKw ?? latestChartRow?.importKw ?? 0;
-  const currentExportKw = liveMeter?.exportKw ?? latestChartRow?.exportKw ?? 0;
+  const latestSolarChartRow = useMemo(() => {
+    return solarChartRows.length ? solarChartRows[solarChartRows.length - 1] : null;
+  }, [solarChartRows]);
+
+  const currentGridKw = liveMeter?.powerKw ?? latestImportChartRow?.powerKw ?? 0;
+  const currentSolarKw = liveSolar?.powerKw ?? latestSolarChartRow?.powerKw ?? 0;
+  const currentExportKw = liveMeter?.exportKw ?? 0;
   const importKwhToday = liveMeter?.importKwhToday ?? todayImportKwh;
 
-  const currentSolarKw = currentGridKw;
   const currentLoadKw = Math.max(0, currentGridKw + currentSolarKw - currentExportKw);
-
-  const chartTheme = useMemo(() => {
-    switch (activeMetric) {
-      case "solar":
-        return {
-          line: "rgba(101,163,13,0.95)",
-          area: "rgba(101,163,13,0.10)",
-          secondary: "rgba(101,163,13,0.45)",
-        };
-      case "export":
-        return {
-          line: "rgba(59,130,246,0.95)",
-          area: "rgba(59,130,246,0.10)",
-          secondary: "rgba(59,130,246,0.45)",
-        };
-      case "consumption":
-        return {
-          line: "rgba(168,85,247,0.95)",
-          area: "rgba(168,85,247,0.10)",
-          secondary: "rgba(168,85,247,0.45)",
-        };
-      case "battery":
-        return {
-          line: "rgba(51,65,85,0.95)",
-          area: "rgba(51,65,85,0.10)",
-          secondary: "rgba(51,65,85,0.45)",
-        };
-      case "import":
-      default:
-        return {
-          line: "rgba(245,158,11,0.95)",
-          area: "rgba(245,158,11,0.10)",
-          secondary: "rgba(245,158,11,0.45)",
-        };
-    }
-  }, [activeMetric]);
-
-  const primarySeriesLabel = activeMetric === "solar" ? "Solar kW" : "Import kW";
-  const secondarySeriesLabel = activeMetric === "solar" ? "Solar kWh" : "Import kWh";
 
   const handleMetricSelection = (metric: ChartMetric) => {
     setSelectedKpiMetric(metric);
     setActiveMetric(metric);
     setActiveDeviceName(null);
 
-    if (metric === "import" || metric === "solar") {
+    if (metric === "import") {
       setShowImportKw(true);
+    }
+    if (metric === "solar") {
+      setShowSolarKw(true);
     }
   };
 
   const handleDownloadCsv = () => {
-    if (!chartRows.length) return;
+    if (!importChartRows.length && !solarChartRows.length) return;
 
     const parseTs = (ts: string) => {
       const d = new Date(ts);
@@ -480,59 +525,74 @@ export default function JuggleEnergyDashboardPrototype() {
       string,
       {
         ts: string;
-        importKw: number;
-        exportKw: number;
+        importKw: number | null;
+        solarKw: number | null;
         importEnergyKwh: number | null;
-        exportEnergyKwh: number | null;
-        count: number;
+        countImport: number;
+        countSolar: number;
       }
     >();
 
-    for (const row of chartRows) {
+    for (const row of importChartRows) {
       const parsed = parseTs(row.ts);
       if (!parsed) continue;
-
-      const bucketDate = floorToInterval(parsed, intervalMinutes);
-      const key = bucketKey(bucketDate);
-
+      const key = bucketKey(floorToInterval(parsed, intervalMinutes));
       const existing = grouped.get(key);
 
       if (!existing) {
         grouped.set(key, {
           ts: key,
-          importKw: row.importKw ?? 0,
-          exportKw: row.exportKw ?? 0,
-          importEnergyKwh: row.importEnergyKwh ?? null,
-          exportEnergyKwh: row.exportEnergyKwh ?? null,
-          count: 1,
+          importKw: row.powerKw,
+          solarKw: null,
+          importEnergyKwh: row.energyKwh,
+          countImport: 1,
+          countSolar: 0,
         });
       } else {
-        existing.importKw += row.importKw ?? 0;
-        existing.exportKw += row.exportKw ?? 0;
-        existing.importEnergyKwh = row.importEnergyKwh ?? existing.importEnergyKwh;
-        existing.exportEnergyKwh = row.exportEnergyKwh ?? existing.exportEnergyKwh;
-        existing.count += 1;
+        existing.importKw = (existing.importKw ?? 0) + row.powerKw;
+        existing.importEnergyKwh = row.energyKwh ?? existing.importEnergyKwh;
+        existing.countImport += 1;
+      }
+    }
+
+    for (const row of solarChartRows) {
+      const parsed = parseTs(row.ts);
+      if (!parsed) continue;
+      const key = bucketKey(floorToInterval(parsed, intervalMinutes));
+      const existing = grouped.get(key);
+
+      if (!existing) {
+        grouped.set(key, {
+          ts: key,
+          importKw: null,
+          solarKw: row.powerKw,
+          importEnergyKwh: null,
+          countImport: 0,
+          countSolar: 1,
+        });
+      } else {
+        existing.solarKw = (existing.solarKw ?? 0) + row.powerKw;
+        existing.countSolar += 1;
       }
     }
 
     const aggregatedRows = Array.from(grouped.values())
       .map((row) => ({
         ts: row.ts,
-        importKw: row.count > 0 ? row.importKw / row.count : 0,
-        exportKw: row.count > 0 ? row.exportKw / row.count : 0,
+        importKw:
+          row.importKw != null && row.countImport > 0 ? row.importKw / row.countImport : null,
+        solarKw:
+          row.solarKw != null && row.countSolar > 0 ? row.solarKw / row.countSolar : null,
         importEnergyKwh: row.importEnergyKwh,
-        exportEnergyKwh: row.exportEnergyKwh,
       }))
       .sort((a, b) => a.ts.localeCompare(b.ts));
 
     const headers = [
       "timestamp",
       "import_kw",
-      "export_kw",
+      "solar_kw",
       "import_energy_kwh",
-      "export_energy_kwh",
       "interval_import_kwh",
-      "interval_export_kwh",
     ];
 
     const rows = aggregatedRows.map((row, index) => {
@@ -543,19 +603,12 @@ export default function JuggleEnergyDashboardPrototype() {
           ? Math.max(0, row.importEnergyKwh - prev.importEnergyKwh)
           : "";
 
-      const intervalExport =
-        prev && row.exportEnergyKwh != null && prev.exportEnergyKwh != null
-          ? Math.max(0, row.exportEnergyKwh - prev.exportEnergyKwh)
-          : "";
-
       return [
         row.ts,
-        row.importKw.toFixed(3),
-        row.exportKw.toFixed(3),
+        row.importKw != null ? row.importKw.toFixed(3) : "",
+        row.solarKw != null ? row.solarKw.toFixed(3) : "",
         row.importEnergyKwh != null ? row.importEnergyKwh.toFixed(3) : "",
-        row.exportEnergyKwh != null ? row.exportEnergyKwh.toFixed(3) : "",
         intervalImport !== "" ? Number(intervalImport).toFixed(3) : "",
-        intervalExport !== "" ? Number(intervalExport).toFixed(3) : "",
       ];
     });
 
@@ -630,15 +683,6 @@ export default function JuggleEnergyDashboardPrototype() {
       metric: "import",
     },
     {
-      name: "Meter 2",
-      type: "Meter",
-      status: "Online",
-      read: "92.0 kW",
-      subread: "Instant read",
-      image: "/device-meter.png",
-      clickable: false,
-    },
-    {
       name: "Battery PCS",
       type: "Battery",
       status: "Online",
@@ -671,9 +715,9 @@ export default function JuggleEnergyDashboardPrototype() {
       title: "Solar Generation",
       now: `${formatNumber(currentSolarKw, 3)} kW`,
       sub:
-        importKwhToday != null
-          ? `${formatNumber(importKwhToday, 3)} kWh today`
-          : "Temporary mirrored import feed",
+        liveSolar?.generationKwh != null
+          ? `${formatNumber(liveSolar.generationKwh, 3)} kWh total`
+          : "Live solar power",
       accent: "bg-lime-600",
       text: "text-lime-700",
       activeRing: "ring-lime-300",
@@ -705,7 +749,9 @@ export default function JuggleEnergyDashboardPrototype() {
     {
       id: "consumption" as const,
       title: "Consumption",
-      now: liveMeter?.powerKw != null ? `${formatNumber(currentLoadKw, 3)} kW` : "—",
+      now: liveMeter?.powerKw != null || liveSolar?.powerKw != null
+        ? `${formatNumber(currentLoadKw, 3)} kW`
+        : "—",
       sub: "Grid + solar - export",
       accent: "bg-purple-500",
       text: "text-purple-600",
@@ -733,11 +779,18 @@ export default function JuggleEnergyDashboardPrototype() {
   const plotWidth = chartWidth - padLeft - padRight;
   const plotHeight = chartHeight - padTop - padBottom;
 
-  const kwMaxRaw = Math.max(1, ...chartRows.map((r) => r.importKw));
+  const chartLength = Math.max(importChartRows.length, solarChartRows.length);
+  const chartRowsForTicks = importChartRows.length >= solarChartRows.length ? importChartRows : solarChartRows;
+
+  const kwMaxRaw = Math.max(
+    1,
+    ...importChartRows.map((r) => r.powerKw),
+    ...solarChartRows.map((r) => r.powerKw),
+  );
   const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
 
   const kwhDomainTop =
-    Math.ceil(Math.max(1, ...chartRows.map((r) => r.importEnergyKwh ?? 0)) / 10) * 10;
+    Math.ceil(Math.max(1, ...importChartRows.map((r) => r.energyKwh ?? 0)) / 10) * 10;
 
   const valueToYLeft = (value: number) =>
     padTop + plotHeight - (value / Math.max(kwDomainTop, 1)) * plotHeight;
@@ -749,32 +802,38 @@ export default function JuggleEnergyDashboardPrototype() {
 
   const xForIndex = (idx: number) =>
     padLeft +
-    (chartRows.length <= 1 ? plotWidth / 2 : (idx / (chartRows.length - 1)) * plotWidth);
+    (chartLength <= 1 ? plotWidth / 2 : (idx / (chartLength - 1)) * plotWidth);
 
-  const importKwPoints = chartRows.map((r, idx) => ({
+  const importKwPoints = importChartRows.map((r, idx) => ({
     x: xForIndex(idx),
-    y: valueToYLeft(r.importKw),
+    y: valueToYLeft(r.powerKw),
   }));
 
-  const importKwhPoints = chartRows.map((r, idx) => ({
+  const solarKwPoints = solarChartRows.map((r, idx) => ({
     x: xForIndex(idx),
-    y: valueToYRight(r.importEnergyKwh ?? 0),
+    y: valueToYLeft(r.powerKw),
+  }));
+
+  const importKwhPoints = importChartRows.map((r, idx) => ({
+    x: xForIndex(idx),
+    y: valueToYRight(r.energyKwh ?? 0),
   }));
 
   const importKwLine = buildLinePath(importKwPoints);
+  const solarKwLine = buildLinePath(solarKwPoints);
   const importKwhLine = buildLinePath(importKwhPoints);
   const importKwhArea = buildAreaPath(importKwhPoints, baselineY);
 
   const xTickIndices = useMemo(() => {
-    if (chartRows.length === 0) return [];
+    if (chartRowsForTicks.length === 0) return [];
     const tickCount = 6;
     const idxs: number[] = [];
     for (let i = 0; i < tickCount; i++) {
-      const idx = Math.round((i / (tickCount - 1)) * (chartRows.length - 1));
+      const idx = Math.round((i / (tickCount - 1)) * (chartRowsForTicks.length - 1));
       idxs.push(idx);
     }
     return Array.from(new Set(idxs));
-  }, [chartRows.length]);
+  }, [chartRowsForTicks]);
 
   const yTicksLeft = useMemo(() => {
     const steps = 4;
@@ -787,17 +846,17 @@ export default function JuggleEnergyDashboardPrototype() {
   }, [kwhDomainTop]);
 
   const totalImportEnergyInRange = useMemo(() => {
-    if (!chartRows.length) return 0;
-    const first = chartRows[0]?.importEnergyKwh ?? 0;
-    const last = chartRows[chartRows.length - 1]?.importEnergyKwh ?? 0;
+    if (!importChartRows.length) return 0;
+    const first = importChartRows[0]?.energyKwh ?? 0;
+    const last = importChartRows[importChartRows.length - 1]?.energyKwh ?? 0;
     return Math.max(0, last - first);
-  }, [chartRows]);
+  }, [importChartRows]);
 
   const averageImportKw = useMemo(() => {
-    if (!chartRows.length) return 0;
-    const sum = chartRows.reduce((acc, row) => acc + row.importKw, 0);
-    return sum / chartRows.length;
-  }, [chartRows]);
+    if (!importChartRows.length) return 0;
+    const sum = importChartRows.reduce((acc, row) => acc + row.powerKw, 0);
+    return sum / importChartRows.length;
+  }, [importChartRows]);
 
   const getPlotBoundsPx = () => {
     if (!chartSvgRef.current) return null;
@@ -815,7 +874,7 @@ export default function JuggleEnergyDashboardPrototype() {
   };
 
   const indexFromClientX = (clientX: number) => {
-    if (!chartRows.length) return null;
+    if (!chartLength) return null;
 
     const bounds = getPlotBoundsPx();
     if (!bounds) return null;
@@ -825,15 +884,16 @@ export default function JuggleEnergyDashboardPrototype() {
     const ratio =
       bounds.plotWidthPx > 0 ? (clampedX - bounds.plotLeftPx) / bounds.plotWidthPx : 0;
 
-    const idx = Math.round(ratio * (chartRows.length - 1));
-    return Math.max(0, Math.min(chartRows.length - 1, idx));
+    const idx = Math.round(ratio * (chartLength - 1));
+    return Math.max(0, Math.min(chartLength - 1, idx));
   };
 
   const hoverIndexFromClientX = (clientX: number) => indexFromClientX(clientX);
 
   const updateHover = (index: number, clientX?: number, clientY?: number) => {
-    const row = chartRows[index];
-    if (!row) return;
+    const importRow = importChartRows[index] ?? null;
+    const solarRow = solarChartRows[index] ?? null;
+    if (!importRow && !solarRow) return;
 
     const x = xForIndex(index);
 
@@ -851,7 +911,7 @@ export default function JuggleEnergyDashboardPrototype() {
       const svgOffsetTopInWrap = svgRect.top - wrapRect.top;
 
       const tooltipWidth = 256;
-      const tooltipHeight = 150;
+      const tooltipHeight = 170;
 
       tooltipLeft = Math.max(
         12,
@@ -869,7 +929,8 @@ export default function JuggleEnergyDashboardPrototype() {
       x,
       tooltipLeft,
       tooltipTop,
-      row,
+      importRow,
+      solarRow,
     });
   };
 
@@ -919,8 +980,9 @@ export default function JuggleEnergyDashboardPrototype() {
       return;
     }
 
-    const fromTs = chartRows[first]?.ts;
-    const toTs = chartRows[last]?.ts;
+    const sourceRows = chartRowsForTicks;
+    const fromTs = sourceRows[first]?.ts;
+    const toTs = sourceRows[last]?.ts;
 
     if (fromTs && toTs) {
       const fromDate = new Date(fromTs).toISOString().slice(0, 10);
@@ -1041,7 +1103,9 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute left-1/2 top-[38px] -translate-x-1/2 rounded-2xl border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
                 <div className="mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
-                  {liveMeter?.powerKw != null ? formatNumber(currentLoadKw, 3) : "—"}
+                  {liveMeter?.powerKw != null || liveSolar?.powerKw != null
+                    ? formatNumber(currentLoadKw, 3)
+                    : "—"}
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
                 </div>
               </div>
@@ -1128,7 +1192,9 @@ export default function JuggleEnergyDashboardPrototype() {
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
                 <div className="text-sm text-slate-500">Building</div>
                 <div className="mt-1 text-xl font-semibold">
-                  {liveMeter?.powerKw != null ? `${formatNumber(currentLoadKw, 3)} kW` : "—"}
+                  {liveMeter?.powerKw != null || liveSolar?.powerKw != null
+                    ? `${formatNumber(currentLoadKw, 3)} kW`
+                    : "—"}
                 </div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
@@ -1189,7 +1255,7 @@ export default function JuggleEnergyDashboardPrototype() {
               <div>
                 <h2 className="text-2xl font-semibold">Energy Overview</h2>
                 <div className="mt-1 text-sm text-slate-500">
-                  Real API meter data with dual-axis overlay and series toggles
+                  Real API meter data with solar and import overlay
                 </div>
               </div>
 
@@ -1268,7 +1334,7 @@ export default function JuggleEnergyDashboardPrototype() {
                   <button
                     type="button"
                     onClick={handleDownloadCsv}
-                    disabled={!chartRows.length || loadingChart}
+                    disabled={(!importChartRows.length && !solarChartRows.length) || loadingChart}
                     className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-[1px] hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Download CSV
@@ -1280,20 +1346,20 @@ export default function JuggleEnergyDashboardPrototype() {
             <div className="mb-3 flex flex-wrap gap-4 text-sm">
               {showImportKw && (
                 <div className="flex items-center gap-2 text-slate-600">
-                  <span
-                    className="inline-block h-3 w-3 rounded-full"
-                    style={{ backgroundColor: chartTheme.line }}
-                  />
-                  {primarySeriesLabel}
+                  <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
+                  Import kW
+                </div>
+              )}
+              {showSolarKw && (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span className="inline-block h-3 w-3 rounded-full bg-lime-600" />
+                  Solar kW
                 </div>
               )}
               {showImportKwh && (
                 <div className="flex items-center gap-2 text-slate-600">
-                  <span
-                    className="inline-block h-3 w-3 rounded-full"
-                    style={{ backgroundColor: chartTheme.secondary }}
-                  />
-                  {secondarySeriesLabel}
+                  <span className="inline-block h-3 w-3 rounded-full bg-amber-300" />
+                  Import kWh
                 </div>
               )}
             </div>
@@ -1306,7 +1372,17 @@ export default function JuggleEnergyDashboardPrototype() {
                   onChange={(e) => setShowImportKw(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300"
                 />
-                {primarySeriesLabel}
+                Import kW
+              </label>
+
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={showSolarKw}
+                  onChange={(e) => setShowSolarKw(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                Solar kW
               </label>
 
               <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -1316,7 +1392,7 @@ export default function JuggleEnergyDashboardPrototype() {
                   onChange={(e) => setShowImportKwh(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300"
                 />
-                {secondarySeriesLabel}
+                Import kWh
               </label>
             </div>
 
@@ -1338,11 +1414,11 @@ export default function JuggleEnergyDashboardPrototype() {
                 <div className="flex h-80 items-center justify-center px-6 text-center text-red-600">
                   {chartError}
                 </div>
-              ) : chartRows.length === 0 ? (
+              ) : chartLength === 0 ? (
                 <div className="flex h-80 items-center justify-center text-slate-500">
                   No API data in selected date range.
                 </div>
-              ) : !showImportKw && !showImportKwh ? (
+              ) : !showImportKw && !showSolarKw && !showImportKwh ? (
                 <div className="flex h-80 items-center justify-center text-slate-500">
                   Select at least one series to display.
                 </div>
@@ -1416,7 +1492,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             fill="#334155"
                             fontWeight="500"
                           >
-                            {formatAxisDate(chartRows[idx].ts)}
+                            {formatAxisDate(chartRowsForTicks[idx].ts)}
                           </text>
                         </g>
                       );
@@ -1443,26 +1519,37 @@ export default function JuggleEnergyDashboardPrototype() {
                       kWh
                     </text>
 
-                    {showImportKwh && (
+                    {showImportKwh && importKwhPoints.length > 0 && (
                       <>
-                        <path d={importKwhArea} fill={chartTheme.area} />
+                        <path d={importKwhArea} fill="rgba(245,158,11,0.10)" />
                         <path
                           d={importKwhLine}
                           fill="none"
-                          stroke={chartTheme.secondary}
-                          strokeWidth="2"
+                          stroke="rgba(245,158,11,0.45)"
+                          strokeWidth="1.2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
                       </>
                     )}
 
-                    {showImportKw && (
+                    {showImportKw && importKwPoints.length > 0 && (
                       <path
                         d={importKwLine}
                         fill="none"
-                        stroke={chartTheme.line}
+                        stroke="rgba(245,158,11,0.95)"
                         strokeWidth="1.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+
+                    {showSolarKw && solarKwPoints.length > 0 && (
+                      <path
+                        d={solarKwLine}
+                        fill="none"
+                        stroke="rgba(101,163,13,0.95)"
+                        strokeWidth="1.4"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
@@ -1491,22 +1578,32 @@ export default function JuggleEnergyDashboardPrototype() {
                           stroke="rgba(15,23,42,0.35)"
                           strokeDasharray="4 4"
                         />
-                        {showImportKw && (
+                        {showImportKw && hovered.importRow && (
                           <circle
                             cx={hovered.x}
-                            cy={valueToYLeft(hovered.row.importKw)}
+                            cy={valueToYLeft(hovered.importRow.powerKw)}
                             r="4"
-                            fill={chartTheme.line}
+                            fill="rgba(245,158,11,0.95)"
                             stroke="white"
                             strokeWidth="2"
                           />
                         )}
-                        {showImportKwh && (
+                        {showSolarKw && hovered.solarRow && (
                           <circle
                             cx={hovered.x}
-                            cy={valueToYRight(hovered.row.importEnergyKwh ?? 0)}
+                            cy={valueToYLeft(hovered.solarRow.powerKw)}
                             r="4"
-                            fill={chartTheme.secondary}
+                            fill="rgba(101,163,13,0.95)"
+                            stroke="white"
+                            strokeWidth="2"
+                          />
+                        )}
+                        {showImportKwh && hovered.importRow && (
+                          <circle
+                            cx={hovered.x}
+                            cy={valueToYRight(hovered.importRow.energyKwh ?? 0)}
+                            r="4"
+                            fill="rgba(245,158,11,0.45)"
                             stroke="white"
                             strokeWidth="2"
                           />
@@ -1524,32 +1621,38 @@ export default function JuggleEnergyDashboardPrototype() {
                       }}
                     >
                       <div className="font-semibold text-slate-900">
-                        {formatTooltipTime(hovered.row.ts)}
+                        {formatTooltipTime(
+                          hovered.importRow?.ts ?? hovered.solarRow?.ts ?? chartRowsForTicks[hovered.index]?.ts,
+                        )}
                       </div>
 
-                      {showImportKw && (
+                      {showImportKw && hovered.importRow && (
                         <div className="mt-2 flex items-center gap-2 text-slate-700">
-                          <span
-                            className="inline-block h-3 w-3 rounded-full"
-                            style={{ backgroundColor: chartTheme.line }}
-                          />
-                          {primarySeriesLabel}:
+                          <span className="inline-block h-3 w-3 rounded-full bg-amber-500" />
+                          Import kW:
                           <span className="font-semibold">
-                            {formatNumber(hovered.row.importKw, 3)} kW
+                            {formatNumber(hovered.importRow.powerKw, 3)} kW
                           </span>
                         </div>
                       )}
 
-                      {showImportKwh && (
+                      {showSolarKw && hovered.solarRow && (
                         <div className="mt-1 flex items-center gap-2 text-slate-700">
-                          <span
-                            className="inline-block h-3 w-3 rounded-full"
-                            style={{ backgroundColor: chartTheme.secondary }}
-                          />
-                          {secondarySeriesLabel}:
+                          <span className="inline-block h-3 w-3 rounded-full bg-lime-600" />
+                          Solar kW:
                           <span className="font-semibold">
-                            {hovered.row.importEnergyKwh != null
-                              ? `${formatNumber(hovered.row.importEnergyKwh, 3)} kWh`
+                            {formatNumber(hovered.solarRow.powerKw, 3)} kW
+                          </span>
+                        </div>
+                      )}
+
+                      {showImportKwh && hovered.importRow && (
+                        <div className="mt-1 flex items-center gap-2 text-slate-700">
+                          <span className="inline-block h-3 w-3 rounded-full bg-amber-300" />
+                          Import kWh:
+                          <span className="font-semibold">
+                            {hovered.importRow.energyKwh != null
+                              ? `${formatNumber(hovered.importRow.energyKwh, 3)} kWh`
                               : "—"}
                           </span>
                         </div>
@@ -1606,19 +1709,16 @@ export default function JuggleEnergyDashboardPrototype() {
                         setActiveDeviceName(null);
                         setActiveMetric(selectedKpiMetric);
 
-                        if (selectedKpiMetric === "import" || selectedKpiMetric === "solar") {
-                          setShowImportKw(true);
-                        }
-
+                        if (selectedKpiMetric === "import") setShowImportKw(true);
+                        if (selectedKpiMetric === "solar") setShowSolarKw(true);
                         return;
                       }
 
                       setActiveDeviceName(device.name);
                       setActiveMetric(device.metric);
 
-                      if (device.metric === "import" || device.metric === "solar") {
-                        setShowImportKw(true);
-                      }
+                      if (device.metric === "import") setShowImportKw(true);
+                      if (device.metric === "solar") setShowSolarKw(true);
                     }}
                     className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
                       device.clickable

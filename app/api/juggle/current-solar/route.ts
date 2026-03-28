@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE = process.env.JUGGLE_API_BASE ?? "https://www.emig.co.uk/p/api";
 const API_KEY = process.env.JUGGLE_API_KEY ?? "";
-const METER_ID = "MET:002757";
+const METER_ID = "MET:002597";
 
 type MeterInfoResponse = {
   emigId: string;
