@@ -60,7 +60,7 @@ function formatNumber(value: number, dp = 1): string {
 
 function formatEnergyKwh(value: number): string {
   if (value >= 1000) return `${formatNumber(value / 1000, 2)} MWh`;
-  return `${formatNumber(value, 0)} kWh`;
+  return `${formatNumber(value, 3)} kWh`;
 }
 
 function buildLinePath(points: { x: number; y: number }[]): string {
