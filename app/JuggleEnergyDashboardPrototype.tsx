@@ -14,6 +14,7 @@ type Device = {
   image: string;
   clickable?: boolean;
   metric?: ChartMetric;
+  subread?: string;
 };
 
 type ApiChartRow = {
@@ -30,6 +31,16 @@ type HoverPoint = {
   tooltipLeft: number;
   tooltipTop: number;
   row: ApiChartRow;
+};
+
+type LiveInverter = {
+  emigId: string;
+  name: string;
+  serial: string;
+  liveKw: number | null;
+  yieldKwh: number | null;
+  ts: string | null;
+  status: "Online" | "Offline";
 };
 
 function shiftDate(dateStr: string, days: number): string {
@@ -97,6 +108,18 @@ function formatAxisDate(ts: string): string {
   });
 }
 
+function formatLastReadInline(ts: string | null | undefined): string {
+  if (!ts) return "Last read —";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "Last read —";
+  return `Last read ${d.toLocaleString(undefined, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}
+
 function getMetricRing(metric?: ChartMetric): string {
   switch (metric) {
     case "solar":
@@ -132,6 +155,7 @@ export default function JuggleEnergyDashboardPrototype() {
   } | null>(null);
 
   const [todayImportKwh, setTodayImportKwh] = useState<number | null>(null);
+  const [liveInverters, setLiveInverters] = useState<LiveInverter[]>([]);
 
   const [chartRows, setChartRows] = useState<ApiChartRow[]>([]);
   const [loadingChart, setLoadingChart] = useState(true);
@@ -242,6 +266,39 @@ export default function JuggleEnergyDashboardPrototype() {
 
     loadTodayImportKwh();
     const interval = setInterval(loadTodayImportKwh, 300000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLiveInverters() {
+      try {
+        const res = await fetch("/api/juggle/inverters/current", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) throw new Error("Failed to load inverter data");
+
+        const json = await res.json();
+
+        if (!cancelled) {
+          setLiveInverters(json.inverters ?? []);
+        }
+      } catch (err) {
+        console.error("Inverter live data error:", err);
+        if (!cancelled) {
+          setLiveInverters([]);
+        }
+      }
+    }
+
+    loadLiveInverters();
+    const interval = setInterval(loadLiveInverters, 300000);
 
     return () => {
       cancelled = true;
@@ -527,56 +584,51 @@ export default function JuggleEnergyDashboardPrototype() {
     URL.revokeObjectURL(url);
   };
 
+  const inverterDevices: Device[] = liveInverters.map((inv) => ({
+    name: inv.name,
+    type: "Inverter",
+    status: inv.status,
+    read: inv.liveKw != null ? `${formatNumber(inv.liveKw, 3)} kW` : "—",
+    subread:
+      inv.yieldKwh != null
+        ? `Total Yield ${formatNumber(inv.yieldKwh, 3)} kWh`
+        : "Total Yield —",
+    image: "/device-inverter.png",
+    clickable: true,
+    metric: "solar",
+  }));
+
   const devices: Device[] = [
     {
       name: "Weather Station",
       type: "Weather",
       status: "Online",
       read: "22°C • 720 W/m²",
+      subread: "Instant read",
       image: "/device-weather.png",
       clickable: true,
       metric: "solar",
     },
-    {
-      name: "Inverter 1",
-      type: "Inverter",
-      status: "Online",
-      read: "18.5 kW",
-      image: "/device-inverter.png",
-      clickable: true,
-      metric: "solar",
-    },
-    {
-      name: "Inverter 2",
-      type: "Inverter",
-      status: "Online",
-      read: "18.8 kW",
-      image: "/device-inverter.png",
-      clickable: true,
-      metric: "solar",
-    },
+    ...inverterDevices,
     {
       name: "Grid Import Meter",
       type: "Meter",
       status: "Online",
       read: liveMeter?.powerKw != null ? `${formatNumber(liveMeter.powerKw, 3)} kW` : "—",
+      subread:
+        importKwhToday != null
+          ? `Today ${formatNumber(importKwhToday, 3)} kWh`
+          : "Instant read",
       image: "/device-meter.png",
       clickable: true,
       metric: "import",
-    },
-    {
-      name: "Inverter 3",
-      type: "Inverter",
-      status: "Offline",
-      read: "0.0 kW",
-      image: "/device-inverter.png",
-      clickable: false,
     },
     {
       name: "Meter 2",
       type: "Meter",
       status: "Online",
       read: "92.0 kW",
+      subread: "Instant read",
       image: "/device-meter.png",
       clickable: false,
     },
@@ -585,6 +637,7 @@ export default function JuggleEnergyDashboardPrototype() {
       type: "Battery",
       status: "Online",
       read: "18.3 kW",
+      subread: "Instant read",
       image: "/device-battery.png",
       clickable: false,
     },
@@ -1328,7 +1381,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={chartWidth - padRight + 10}
                             y={y + 4}
                             textAnchor="start"
-                            fontSize="9.0"
+                            fontSize="9"
                             fill="#334155"
                           >
                             {tick >= 10 ? Math.round(tick) : formatNumber(tick, 2)}
@@ -1528,7 +1581,7 @@ export default function JuggleEnergyDashboardPrototype() {
           <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-2xl font-semibold">Device Overview</h2>
-              <div className="text-sm text-slate-500">7 devices</div>
+              <div className="text-sm text-slate-500">{devices.length} devices</div>
             </div>
 
             <div className="space-y-2">
@@ -1561,14 +1614,14 @@ export default function JuggleEnergyDashboardPrototype() {
                         setShowImportKw(true);
                       }
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition ${
+                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
                       device.clickable
                         ? "cursor-pointer hover:shadow-sm"
                         : "cursor-default"
                     } ${isSelected ? `ring-2 ${activeRing}` : "border-slate-200"}`}
                   >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
+                    <div className="flex min-w-0 items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
                         <img
                           src={device.image}
                           alt={device.type}
@@ -1578,12 +1631,17 @@ export default function JuggleEnergyDashboardPrototype() {
 
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">{device.name}</div>
-                        <div
-                          className={`text-xs ${
-                            device.status === "Online" ? "text-emerald-600" : "text-red-500"
-                          }`}
-                        >
-                          {device.status}
+                        <div className="text-xs text-slate-500">
+                          <span
+                            className={
+                              device.status === "Online" ? "text-emerald-600" : "text-red-500"
+                            }
+                          >
+                            {device.status}
+                          </span>
+                          {device.type === "Inverter" && device.subread ? (
+                            <span className="ml-2 text-slate-500">• {formatLastReadInline(liveInverters.find((inv) => inv.name === device.name)?.ts)}</span>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -1591,7 +1649,9 @@ export default function JuggleEnergyDashboardPrototype() {
                     <div className="ml-3 text-right">
                       <div className="text-sm font-semibold">{device.read}</div>
                       <div className="text-xs text-slate-500">
-                        {device.clickable ? "Click to plot" : "Instant read"}
+                        {device.type === "Inverter"
+                          ? device.subread ?? "Total Yield —"
+                          : device.subread ?? (device.clickable ? "Click to plot" : "Instant read")}
                       </div>
                     </div>
                   </button>
