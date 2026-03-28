@@ -59,7 +59,7 @@ function formatNumber(value: number, dp = 1): string {
 }
 
 function formatEnergyKwh(value: number): string {
-  if (value >= 1000) return `${formatNumber(value / 1000, 2)} MWh`;
+  if (value >= 1000) return `${formatNumber(value / 1000, 3)} MWh`;
   return `${formatNumber(value, 3)} kWh`;
 }
 
@@ -155,6 +155,8 @@ export default function JuggleEnergyDashboardPrototype() {
   const [isDraggingRange, setIsDraggingRange] = useState(false);
   const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
   const [dragCurrentIndex, setDragCurrentIndex] = useState<number | null>(null);
+
+  const [downloadInterval, setDownloadInterval] = useState<"5" | "15" | "30">("30");
 
   useEffect(() => {
     const saved = window.localStorage.getItem("dashboard-hero-collapsed");
@@ -386,6 +388,143 @@ export default function JuggleEnergyDashboardPrototype() {
     if (metric === "import" || metric === "solar") {
       setShowImportKw(true);
     }
+  };
+
+  const handleDownloadCsv = () => {
+    if (!chartRows.length) return;
+
+    const parseTs = (ts: string) => {
+      const d = new Date(ts);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const floorToInterval = (date: Date, minutes: number) => {
+      const d = new Date(date);
+      d.setSeconds(0, 0);
+      const mins = d.getMinutes();
+      d.setMinutes(Math.floor(mins / minutes) * minutes);
+      return d;
+    };
+
+    const bucketKey = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const hh = String(date.getHours()).padStart(2, "0");
+      const mm = String(date.getMinutes()).padStart(2, "0");
+      return `${y}-${m}-${d} ${hh}:${mm}:00`;
+    };
+
+    const intervalMinutes = Number(downloadInterval);
+
+    const grouped = new Map<
+      string,
+      {
+        ts: string;
+        importKw: number;
+        exportKw: number;
+        importEnergyKwh: number | null;
+        exportEnergyKwh: number | null;
+        count: number;
+      }
+    >();
+
+    for (const row of chartRows) {
+      const parsed = parseTs(row.ts);
+      if (!parsed) continue;
+
+      const bucketDate = floorToInterval(parsed, intervalMinutes);
+      const key = bucketKey(bucketDate);
+
+      const existing = grouped.get(key);
+
+      if (!existing) {
+        grouped.set(key, {
+          ts: key,
+          importKw: row.importKw ?? 0,
+          exportKw: row.exportKw ?? 0,
+          importEnergyKwh: row.importEnergyKwh ?? null,
+          exportEnergyKwh: row.exportEnergyKwh ?? null,
+          count: 1,
+        });
+      } else {
+        existing.importKw += row.importKw ?? 0;
+        existing.exportKw += row.exportKw ?? 0;
+        existing.importEnergyKwh = row.importEnergyKwh ?? existing.importEnergyKwh;
+        existing.exportEnergyKwh = row.exportEnergyKwh ?? existing.exportEnergyKwh;
+        existing.count += 1;
+      }
+    }
+
+    const aggregatedRows = Array.from(grouped.values())
+      .map((row) => ({
+        ts: row.ts,
+        importKw: row.count > 0 ? row.importKw / row.count : 0,
+        exportKw: row.count > 0 ? row.exportKw / row.count : 0,
+        importEnergyKwh: row.importEnergyKwh,
+        exportEnergyKwh: row.exportEnergyKwh,
+      }))
+      .sort((a, b) => a.ts.localeCompare(b.ts));
+
+    const headers = [
+      "timestamp",
+      "import_kw",
+      "export_kw",
+      "import_energy_kwh",
+      "export_energy_kwh",
+      "interval_import_kwh",
+      "interval_export_kwh",
+    ];
+
+    const rows = aggregatedRows.map((row, index) => {
+      const prev = index > 0 ? aggregatedRows[index - 1] : null;
+
+      const intervalImport =
+        prev && row.importEnergyKwh != null && prev.importEnergyKwh != null
+          ? Math.max(0, row.importEnergyKwh - prev.importEnergyKwh)
+          : "";
+
+      const intervalExport =
+        prev && row.exportEnergyKwh != null && prev.exportEnergyKwh != null
+          ? Math.max(0, row.exportEnergyKwh - prev.exportEnergyKwh)
+          : "";
+
+      return [
+        row.ts,
+        row.importKw.toFixed(3),
+        row.exportKw.toFixed(3),
+        row.importEnergyKwh != null ? row.importEnergyKwh.toFixed(3) : "",
+        row.exportEnergyKwh != null ? row.exportEnergyKwh.toFixed(3) : "",
+        intervalImport !== "" ? Number(intervalImport).toFixed(3) : "",
+        intervalExport !== "" ? Number(intervalExport).toFixed(3) : "",
+      ];
+    });
+
+    const csv = [headers, ...rows]
+      .map((cols) =>
+        cols
+          .map((value) => {
+            const str = String(value ?? "");
+            if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+          })
+          .join(","),
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `juggle-${downloadInterval}min-data-${dateFrom}-to-${dateTo}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
   };
 
   const devices: Device[] = [
@@ -744,10 +883,8 @@ export default function JuggleEnergyDashboardPrototype() {
     }
   };
 
-  const selectionStartX =
-    dragStartIndex !== null ? xForIndex(dragStartIndex) : null;
-  const selectionEndX =
-    dragCurrentIndex !== null ? xForIndex(dragCurrentIndex) : null;
+  const selectionStartX = dragStartIndex !== null ? xForIndex(dragStartIndex) : null;
+  const selectionEndX = dragCurrentIndex !== null ? xForIndex(dragCurrentIndex) : null;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -1025,7 +1162,7 @@ export default function JuggleEnergyDashboardPrototype() {
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap items-end gap-3">
                   <div className="rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
                     <label className="block text-xs text-slate-500">From</label>
                     <input
@@ -1040,6 +1177,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       className="mt-1 bg-transparent text-sm font-medium outline-none"
                     />
                   </div>
+
                   <div className="rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
                     <label className="block text-xs text-slate-500">To</label>
                     <input
@@ -1054,6 +1192,28 @@ export default function JuggleEnergyDashboardPrototype() {
                       className="mt-1 bg-transparent text-sm font-medium outline-none"
                     />
                   </div>
+
+                  <div className="rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+                    <label className="block text-xs text-slate-500">CSV interval</label>
+                    <select
+                      value={downloadInterval}
+                      onChange={(e) => setDownloadInterval(e.target.value as "5" | "15" | "30")}
+                      className="mt-1 bg-transparent text-sm font-medium outline-none"
+                    >
+                      <option value="5">5 min</option>
+                      <option value="15">15 min</option>
+                      <option value="30">30 min</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadCsv}
+                    disabled={!chartRows.length || loadingChart}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-[1px] hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Download CSV
+                  </button>
                 </div>
               </div>
             </div>
@@ -1147,15 +1307,15 @@ export default function JuggleEnergyDashboardPrototype() {
                             stroke={tick === 0 ? "rgba(51,65,85,0.5)" : "rgba(148,163,184,0.18)"}
                             strokeWidth={tick === 0 ? "1.5" : "1"}
                           />
-                         <text
-  x={padLeft - 10}
-  y={y + 4}
-  textAnchor="end"
-  fontSize="9"
-  fill="#334155"
->
-  {formatNumber(tick, 1)}
-</text>
+                          <text
+                            x={padLeft - 10}
+                            y={y + 4}
+                            textAnchor="end"
+                            fontSize="9"
+                            fill="#334155"
+                          >
+                            {tick.toFixed(1)}
+                          </text>
                         </g>
                       );
                     })}
@@ -1249,20 +1409,18 @@ export default function JuggleEnergyDashboardPrototype() {
                       />
                     )}
 
-                    {isDraggingRange &&
-                      selectionStartX !== null &&
-                      selectionEndX !== null && (
-                        <rect
-                          x={Math.min(selectionStartX, selectionEndX)}
-                          y={padTop}
-                          width={Math.abs(selectionEndX - selectionStartX)}
-                          height={plotHeight}
-                          fill="rgba(15,23,42,0.08)"
-                          stroke="rgba(15,23,42,0.18)"
-                          strokeWidth="1"
-                          rx="2"
-                        />
-                      )}
+                    {isDraggingRange && selectionStartX !== null && selectionEndX !== null && (
+                      <rect
+                        x={Math.min(selectionStartX, selectionEndX)}
+                        y={padTop}
+                        width={Math.abs(selectionEndX - selectionStartX)}
+                        height={plotHeight}
+                        fill="rgba(15,23,42,0.08)"
+                        stroke="rgba(15,23,42,0.18)"
+                        strokeWidth="1"
+                        rx="2"
+                      />
+                    )}
 
                     {hovered && !isDraggingRange && (
                       <>
@@ -1407,11 +1565,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       device.clickable
                         ? "cursor-pointer hover:shadow-sm"
                         : "cursor-default"
-                    } ${
-                      isSelected
-                        ? `ring-2 ${activeRing}`
-                        : "border-slate-200"
-                    }`}
+                    } ${isSelected ? `ring-2 ${activeRing}` : "border-slate-200"}`}
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
