@@ -1328,7 +1328,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={chartWidth - padRight + 10}
                             y={y + 4}
                             textAnchor="start"
-                            fontSize="9"
+                            fontSize="9.0"
                             fill="#334155"
                           >
                             {tick >= 10 ? Math.round(tick) : formatNumber(tick, 2)}
