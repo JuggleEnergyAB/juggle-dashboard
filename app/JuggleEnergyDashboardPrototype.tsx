@@ -152,6 +152,10 @@ export default function JuggleEnergyDashboardPrototype() {
 
   const [hovered, setHovered] = useState<HoverPoint | null>(null);
 
+  const [isDraggingRange, setIsDraggingRange] = useState(false);
+  const [dragStartIndex, setDragStartIndex] = useState<number | null>(null);
+  const [dragCurrentIndex, setDragCurrentIndex] = useState<number | null>(null);
+
   useEffect(() => {
     const saved = window.localStorage.getItem("dashboard-hero-collapsed");
     if (saved === "true") setHeroCollapsed(true);
@@ -531,8 +535,8 @@ export default function JuggleEnergyDashboardPrototype() {
   const plotWidth = chartWidth - padLeft - padRight;
   const plotHeight = chartHeight - padTop - padBottom;
 
-const kwMaxRaw = Math.max(1, ...chartRows.map((r) => r.importKw));
-const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
+  const kwMaxRaw = Math.max(1, ...chartRows.map((r) => r.importKw));
+  const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
 
   const kwhDomainTop =
     Math.ceil(Math.max(1, ...chartRows.map((r) => r.importEnergyKwh ?? 0)) / 10) * 10;
@@ -597,22 +601,37 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
     return sum / chartRows.length;
   }, [chartRows]);
 
-  const hoverIndexFromClientX = (clientX: number) => {
-    if (!chartSvgRef.current || chartRows.length === 0) return null;
+  const getPlotBoundsPx = () => {
+    if (!chartSvgRef.current) return null;
 
     const rect = chartSvgRef.current.getBoundingClientRect();
-    const localX = clientX - rect.left;
-
     const plotLeftPx = (padLeft / chartWidth) * rect.width;
     const plotRightPx = ((chartWidth - padRight) / chartWidth) * rect.width;
-    const plotWidthPx = plotRightPx - plotLeftPx;
 
-    const clampedX = Math.max(plotLeftPx, Math.min(plotRightPx, localX));
-    const ratio = plotWidthPx > 0 ? (clampedX - plotLeftPx) / plotWidthPx : 0;
+    return {
+      rect,
+      plotLeftPx,
+      plotRightPx,
+      plotWidthPx: plotRightPx - plotLeftPx,
+    };
+  };
+
+  const indexFromClientX = (clientX: number) => {
+    if (!chartRows.length) return null;
+
+    const bounds = getPlotBoundsPx();
+    if (!bounds) return null;
+
+    const localX = clientX - bounds.rect.left;
+    const clampedX = Math.max(bounds.plotLeftPx, Math.min(bounds.plotRightPx, localX));
+    const ratio =
+      bounds.plotWidthPx > 0 ? (clampedX - bounds.plotLeftPx) / bounds.plotWidthPx : 0;
 
     const idx = Math.round(ratio * (chartRows.length - 1));
     return Math.max(0, Math.min(chartRows.length - 1, idx));
   };
+
+  const hoverIndexFromClientX = (clientX: number) => indexFromClientX(clientX);
 
   const updateHover = (index: number, clientX?: number, clientY?: number) => {
     const row = chartRows[index];
@@ -656,15 +675,79 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
     });
   };
 
+  const handleChartMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const idx = indexFromClientX(e.clientX);
+    if (idx === null) return;
+
+    setIsDraggingRange(true);
+    setDragStartIndex(idx);
+    setDragCurrentIndex(idx);
+    setHovered(null);
+  };
+
   const handleChartMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDraggingRange) {
+      const idx = indexFromClientX(e.clientX);
+      if (idx === null) return;
+      setDragCurrentIndex(idx);
+      return;
+    }
+
     const idx = hoverIndexFromClientX(e.clientX);
     if (idx === null) return;
     updateHover(idx, e.clientX, e.clientY);
   };
 
-  const handleChartMouseLeave = () => {
+  const handleChartMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingRange) return;
+
+    const endIdx = indexFromClientX(e.clientX);
+    const startIdx = dragStartIndex;
+
+    setIsDraggingRange(false);
+
+    if (startIdx === null || endIdx === null) {
+      setDragStartIndex(null);
+      setDragCurrentIndex(null);
+      return;
+    }
+
+    const first = Math.min(startIdx, endIdx);
+    const last = Math.max(startIdx, endIdx);
+
+    if (last - first < 1) {
+      setDragStartIndex(null);
+      setDragCurrentIndex(null);
+      return;
+    }
+
+    const fromTs = chartRows[first]?.ts;
+    const toTs = chartRows[last]?.ts;
+
+    if (fromTs && toTs) {
+      const fromDate = new Date(fromTs).toISOString().slice(0, 10);
+      const toDate = new Date(toTs).toISOString().slice(0, 10);
+
+      setDateFrom(fromDate);
+      setDateTo(toDate);
+      setRangeLabel("Custom");
+    }
+
+    setDragStartIndex(null);
+    setDragCurrentIndex(null);
     setHovered(null);
   };
+
+  const handleChartMouseLeave = () => {
+    if (!isDraggingRange) {
+      setHovered(null);
+    }
+  };
+
+  const selectionStartX =
+    dragStartIndex !== null ? xForIndex(dragStartIndex) : null;
+  const selectionEndX =
+    dragCurrentIndex !== null ? xForIndex(dragCurrentIndex) : null;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -933,6 +1016,13 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
                       {preset}
                     </button>
                   ))}
+
+                  <button
+                    onClick={() => setPresetRange("30D")}
+                    className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                  >
+                    Reset zoom
+                  </button>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
@@ -1013,8 +1103,12 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
 
             <div
               ref={chartWrapRef}
-              className="relative overflow-hidden rounded-2xl bg-slate-50 p-3"
+              className={`relative overflow-hidden rounded-2xl bg-slate-50 p-3 ${
+                isDraggingRange ? "cursor-ew-resize" : "cursor-crosshair"
+              }`}
+              onMouseDown={handleChartMouseDown}
               onMouseMove={handleChartMouseMove}
+              onMouseUp={handleChartMouseUp}
               onMouseLeave={handleChartMouseLeave}
             >
               {loadingChart ? (
@@ -1038,7 +1132,7 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
                   <svg
                     ref={chartSvgRef}
                     viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    className="block h-80 w-full"
+                    className="block h-80 w-full select-none"
                     preserveAspectRatio="none"
                   >
                     {yTicksLeft.map((tick, i) => {
@@ -1053,15 +1147,15 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
                             stroke={tick === 0 ? "rgba(51,65,85,0.5)" : "rgba(148,163,184,0.18)"}
                             strokeWidth={tick === 0 ? "1.5" : "1"}
                           />
-                          <text
-                            x={padLeft - 10}
-                            y={y + 4}
-                            textAnchor="end"
-                            fontSize="12"
-                            fill="#334155"
-                          >
-                            {Math.round(tick)}
-                          </text>
+                         <text
+  x={padLeft - 10}
+  y={y + 4}
+  textAnchor="end"
+  fontSize="9"
+  fill="#334155"
+>
+  {formatNumber(tick, 1)}
+</text>
                         </g>
                       );
                     })}
@@ -1074,7 +1168,7 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
                             x={chartWidth - padRight + 10}
                             y={y + 4}
                             textAnchor="start"
-                            fontSize="12"
+                            fontSize="9"
                             fill="#334155"
                           >
                             {tick >= 10 ? Math.round(tick) : formatNumber(tick, 2)}
@@ -1109,26 +1203,26 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
                       );
                     })}
 
-                 <text
-  x={padLeft - 10}
-  y={padTop - 12}
-  textAnchor="end"
-  fontSize="11"
-  fill="rgba(30,41,59,0.8)"
-  fontWeight="600"
->
-  kW
-</text>
-<text
-  x={chartWidth - padRight + 10}
-  y={padTop - 12}
-  textAnchor="start"
-  fontSize="11"
-  fill="rgba(30,41,59,0.8)"
-  fontWeight="600"
->
-  kWh
-</text>
+                    <text
+                      x={padLeft - 10}
+                      y={padTop - 12}
+                      textAnchor="end"
+                      fontSize="11"
+                      fill="rgba(30,41,59,0.8)"
+                      fontWeight="600"
+                    >
+                      kW
+                    </text>
+                    <text
+                      x={chartWidth - padRight + 10}
+                      y={padTop - 12}
+                      textAnchor="start"
+                      fontSize="11"
+                      fill="rgba(30,41,59,0.8)"
+                      fontWeight="600"
+                    >
+                      kWh
+                    </text>
 
                     {showImportKwh && (
                       <>
@@ -1155,7 +1249,22 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
                       />
                     )}
 
-                    {hovered && (
+                    {isDraggingRange &&
+                      selectionStartX !== null &&
+                      selectionEndX !== null && (
+                        <rect
+                          x={Math.min(selectionStartX, selectionEndX)}
+                          y={padTop}
+                          width={Math.abs(selectionEndX - selectionStartX)}
+                          height={plotHeight}
+                          fill="rgba(15,23,42,0.08)"
+                          stroke="rgba(15,23,42,0.18)"
+                          strokeWidth="1"
+                          rx="2"
+                        />
+                      )}
+
+                    {hovered && !isDraggingRange && (
                       <>
                         <line
                           x1={hovered.x}
@@ -1189,7 +1298,7 @@ const kwDomainTop = Math.max(2, Math.ceil(kwMaxRaw / 2) * 2);
                     )}
                   </svg>
 
-                  {hovered && (
+                  {hovered && !isDraggingRange && (
                     <div
                       className="pointer-events-none absolute z-10 w-64 rounded-2xl bg-white px-4 py-3 text-sm shadow-lg ring-1 ring-slate-200"
                       style={{
