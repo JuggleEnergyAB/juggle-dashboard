@@ -15,6 +15,7 @@ type Device = {
   clickable?: boolean;
   metric?: ChartMetric;
   subread?: string;
+  detailLine2?: string;
 };
 
 type ApiChartRow = {
@@ -38,6 +39,7 @@ type LiveInverter = {
   name: string;
   serial: string;
   liveKw: number | null;
+  avgKwToday?: number | null;
   yieldKwh: number | null;
   ts: string | null;
   status: "Online" | "Offline";
@@ -593,6 +595,10 @@ export default function JuggleEnergyDashboardPrototype() {
       inv.yieldKwh != null
         ? `Total Yield ${formatNumber(inv.yieldKwh, 3)} kWh`
         : "Total Yield —",
+    detailLine2:
+      inv.avgKwToday != null
+        ? `AVG kW today ${formatNumber(inv.avgKwToday, 3)}`
+        : "AVG kW today —",
     image: "/device-inverter.png",
     clickable: true,
     metric: "solar",
@@ -1364,7 +1370,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={padLeft - 10}
                             y={y + 4}
                             textAnchor="end"
-                            fontSize="8"
+                            fontSize="9"
                             fill="#334155"
                           >
                             {tick.toFixed(1)}
@@ -1381,7 +1387,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={chartWidth - padRight + 10}
                             y={y + 4}
                             textAnchor="start"
-                            fontSize="8"
+                            fontSize="9"
                             fill="#334155"
                           >
                             {tick >= 10 ? Math.round(tick) : formatNumber(tick, 2)}
@@ -1406,7 +1412,7 @@ export default function JuggleEnergyDashboardPrototype() {
                             x={x}
                             y={chartHeight - 6}
                             textAnchor="middle"
-                            fontSize="8"
+                            fontSize="10"
                             fill="#334155"
                             fontWeight="500"
                           >
@@ -1420,7 +1426,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       x={padLeft - 10}
                       y={padTop - 12}
                       textAnchor="end"
-                      fontSize="9"
+                      fontSize="11"
                       fill="rgba(30,41,59,0.8)"
                       fontWeight="600"
                     >
@@ -1430,7 +1436,7 @@ export default function JuggleEnergyDashboardPrototype() {
                       x={chartWidth - padRight + 10}
                       y={padTop - 12}
                       textAnchor="start"
-                      fontSize="9"
+                      fontSize="11"
                       fill="rgba(30,41,59,0.8)"
                       fontWeight="600"
                     >
@@ -1444,7 +1450,7 @@ export default function JuggleEnergyDashboardPrototype() {
                           d={importKwhLine}
                           fill="none"
                           stroke={chartTheme.secondary}
-                          strokeWidth="1.2"
+                          strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -1639,8 +1645,10 @@ export default function JuggleEnergyDashboardPrototype() {
                           >
                             {device.status}
                           </span>
-                          {device.type === "Inverter" && device.subread ? (
-                            <span className="ml-2 text-slate-500">• {formatLastReadInline(liveInverters.find((inv) => inv.name === device.name)?.ts)}</span>
+                          {device.type === "Inverter" ? (
+                            <span className="ml-2 text-slate-500">
+                              • {formatLastReadInline(liveInverters.find((inv) => inv.name === device.name)?.ts)}
+                            </span>
                           ) : null}
                         </div>
                       </div>
@@ -1648,6 +1656,9 @@ export default function JuggleEnergyDashboardPrototype() {
 
                     <div className="ml-3 text-right">
                       <div className="text-sm font-semibold">{device.read}</div>
+                      {device.detailLine2 && (
+                        <div className="text-xs text-slate-500">{device.detailLine2}</div>
+                      )}
                       <div className="text-xs text-slate-500">
                         {device.type === "Inverter"
                           ? device.subread ?? "Total Yield —"

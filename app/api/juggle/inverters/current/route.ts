@@ -49,6 +49,7 @@ async function fetchInverter(
       name,
       serial: "",
       liveKw: null,
+      avgKwToday: null,
       yieldKwh: null,
       ts: null,
       status: "Offline" as const,
@@ -70,11 +71,21 @@ async function fetchInverter(
       ? last.importEnergy.value / 1000
       : null;
 
+  const validPowerReadings = readings
+    .map((r) => r.importActivePower?.value)
+    .filter((v): v is number => typeof v === "number");
+
+  const avgKwToday =
+    validPowerReadings.length > 0
+      ? validPowerReadings.reduce((sum, v) => sum + v, 0) / validPowerReadings.length / 1000
+      : null;
+
   return {
     emigId,
     name,
     serial: json.meterSerial ?? "",
     liveKw,
+    avgKwToday,
     yieldKwh,
     ts: last?.ts ?? null,
     status: last ? ("Online" as const) : ("Offline" as const),
