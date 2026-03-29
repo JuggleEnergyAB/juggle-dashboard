@@ -1690,15 +1690,13 @@ export default function JuggleEnergyDashboardPrototype() {
       <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-              <div className="relative h-7 w-7">
-                <span className="absolute left-0 top-1 h-4 w-4 rounded-full border-2 border-fuchsia-500" />
-                <span className="absolute right-0 top-0 h-4 w-4 rounded-full border-2 border-orange-400" />
-                <span className="absolute bottom-0 left-2 h-4 w-4 rounded-full border-2 border-lime-500" />
-              </div>
-            </div>
+            <img
+  src="/juggle-logo.png"
+  alt="Juggle Energy"
+  className="h-12 w-auto object-contain"
+/>
             <h1 className="text-3xl font-light tracking-tight">
-              Juggle <span className="font-medium">Energy</span>
+               <span className="font-medium"></span>
             </h1>
           </div>
 
