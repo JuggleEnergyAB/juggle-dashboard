@@ -1208,14 +1208,12 @@ export default function JuggleEnergyDashboardPrototype() {
     { name: "Energy & CO₂", href: "#" },
     { name: "Carbon", href: "#" },
     { name: "Plot & Report", href: "#" },
-    { name: "Daily Energy", href: "#" },
     { name: "Monthly Energy", href: "#" },
     { name: "Yearly Comparison", href: "#" },
     { name: "Alarms", href: "/alarms" },
     { name: "Meters", href: "#" },
     { name: "Inverters", href: "/inverters" },
     { name: "Signals", href: "#" },
-    { name: "Staff", href: "#" },
     { name: "Billing", href: "#" },
   ];
 
@@ -1772,9 +1770,9 @@ export default function JuggleEnergyDashboardPrototype() {
 
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),rgba(15,23,42,0.05))]" />
 
-              <div className="absolute left-6 top-[60px] rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
+              <div className="absolute left-5 top-[20px] rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
                 <div className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                  Weather
+    
                 </div>
                 <div className="relative mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   {liveWeather?.irradianceWm2 != null ? formatNumber(liveWeather.irradianceWm2, 0) : "—"}
@@ -1785,14 +1783,14 @@ export default function JuggleEnergyDashboardPrototype() {
                 </div>
               </div>
 
-              <div className="absolute left-[170px] top-[20px] rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
+              <div className="absolute left-[150px] top-[20px] rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
                 <div className="relative mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   {liveSolar?.powerKw != null ? formatNumber(liveSolar.powerKw, 3) : "—"}
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
                 </div>
               </div>
 
-              <div className="absolute left-1/2 top-[38px] -translate-x-1/2 rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
+              <div className="absolute left-1/2 top-[48px] -translate-x-1/2 rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
                 <div className="relative mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   {liveMeter?.powerKw != null || liveSolar?.powerKw != null
                     ? formatNumber(currentLoadKw, 3)
@@ -1801,7 +1799,7 @@ export default function JuggleEnergyDashboardPrototype() {
                 </div>
               </div>
 
-              <div className="absolute right-12 top-5 rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
+              <div className="absolute right-32 top-36 rounded-2xl border border-white/30 bg-white/25 px-4 py-3 backdrop-blur-2xl shadow-[0_10px_40px_rgba(15,23,42,0.18)] before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/50 before:via-white/20 before:to-transparent before:opacity-60 before:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:ring-1 after:ring-white/30 after:pointer-events-none">
                 <div className="relative mt-1 text-[22px] font-semibold leading-none tracking-tight text-slate-900">
                   {liveMeter?.powerKw != null ? formatNumber(liveMeter.powerKw, 3) : "—"}
                   <span className="ml-1 text-sm font-medium text-slate-500">kW</span>
@@ -2325,7 +2323,7 @@ export default function JuggleEnergyDashboardPrototype() {
                         </text>
                       )}
 
-                      {showImportKwh && importKwhPoints.length > 0 && !showAnyWeather && (
+                      {showImportKwh && importKwhPoints.length > 0 && (
                         <>
                           <path d={importKwhArea} fill="url(#importKwhGlassFill)" />
                           <path
@@ -2339,7 +2337,7 @@ export default function JuggleEnergyDashboardPrototype() {
                         </>
                       )}
 
-                      {showSolarKwh && solarKwhPoints.length > 0 && !showAnyWeather && (
+                      {showSolarKwh && solarKwhPoints.length > 0 && (
                         <>
                           <path d={solarKwhArea} fill="url(#solarKwhGlassFill)" />
                           <path
