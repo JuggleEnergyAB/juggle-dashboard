@@ -1759,7 +1759,7 @@ export default function JuggleEnergyDashboardPrototype() {
        
         {!heroCollapsed ? (
           <section className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-            <div className="relative h-[540px] overflow-hidden bg-slate-100">
+            <div className="relative h-[580px] overflow-hidden bg-slate-100">
               <img
                 src="/solar-dashboard.png"
                 alt="Solar dashboard hero"
